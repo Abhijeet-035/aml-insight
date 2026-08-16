@@ -6,7 +6,9 @@ AML Insight is a transaction-network analysis platform for anti-money-laundering
 
 The project is designed around IBM's synthetic AML benchmark. The dataset is not committed to this repository. Download it separately and place `HI-Small_Trans.csv` under `data/raw/`.
 
-IBM states that the data is synthetic and includes a laundering label for transactions. The actual dataset is released under CDLA-Sharing-1.0. citehttps://github.com/IBM/AML-Data
+IBM states that the data is synthetic and includes a laundering label for transactions. The actual dataset is released under CDLA-Sharing-1.0.
+
+Source: https://github.com/IBM/AML-Data
 
 ## Architecture
 
