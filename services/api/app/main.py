@@ -1,13 +1,17 @@
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 import json
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 ROOT = Path(__file__).resolve().parents[3]
 MODEL_METRICS = ROOT / "models" / "metrics.json"
+PROCESSED = ROOT / "data" / "processed" / "transactions.csv"
+EDGES = ROOT / "data" / "processed" / "edges.csv"
 
-app = FastAPI(title="AML Insight API", version="0.2.0")
+app = FastAPI(title="AML Insight API", version="0.3.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -23,6 +27,14 @@ def model_status() -> dict:
     return {"status": "trained", "metrics": json.loads(MODEL_METRICS.read_text())}
 
 
+@lru_cache(maxsize=1)
+def transaction_frame() -> pd.DataFrame | None:
+    if not PROCESSED.exists():
+        return None
+    columns = ["transaction_id", "timestamp", "account", "counterparty_account", "amount_received", "receiving_currency", "payment_format", "is_laundering"]
+    return pd.read_csv(PROCESSED, usecols=lambda column: column in columns)
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
@@ -31,16 +43,13 @@ def health():
 @app.get("/api/v1/overview")
 def overview():
     status = model_status()
-    return {
-        "transactions": 0,
-        "alerts": 0,
-        "suspicious_rate": 0,
-        "network_nodes": 0,
-        "risk_volume": 0,
-        "model_status": status["status"],
-        "model_metrics": status["metrics"],
-        "data_status": "awaiting_dataset",
-    }
+    frame = transaction_frame()
+    if frame is None:
+        return {"transactions": 0, "alerts": 0, "suspicious_rate": 0, "network_nodes": 0, "risk_volume": 0, "model_status": status["status"], "model_metrics": status["metrics"], "data_status": "awaiting_dataset"}
+    nodes = pd.concat([frame["account"], frame["counterparty_account"]]).nunique()
+    suspicious = int(frame["is_laundering"].sum())
+    risk_volume = frame.loc[frame["is_laundering"] == 1, "amount_received"].sum()
+    return {"transactions": int(len(frame)), "alerts": suspicious, "suspicious_rate": round(suspicious / len(frame) * 100, 4) if len(frame) else 0, "network_nodes": int(nodes), "risk_volume": round(float(risk_volume), 2), "model_status": status["status"], "model_metrics": status["metrics"], "data_status": "processed_dataset"}
 
 
 @app.get("/api/v1/model")
@@ -49,10 +58,29 @@ def model():
 
 
 @app.get("/api/v1/alerts")
-def alerts():
-    return []
+def alerts(limit: int = 20):
+    frame = transaction_frame()
+    if frame is None:
+        return []
+    suspicious = frame[frame["is_laundering"] == 1].sort_values("amount_received", ascending=False).head(max(1, min(limit, 100)))
+    return [{"id": f"AML-{int(row.transaction_id):06d}", "account": str(row.account), "counterparty": str(row.counterparty_account), "amount": float(row.amount_received), "currency": str(row.receiving_currency), "risk": 90.0, "pattern": "Benchmark laundering transaction"} for row in suspicious.itertuples(index=False)]
+
+
+@app.get("/api/v1/network")
+def network(limit: int = 20):
+    if not EDGES.exists():
+        return {"nodes": [], "edges": []}
+    edges = pd.read_csv(EDGES).sort_values(["suspicious_count", "total_amount"], ascending=False).head(max(1, min(limit, 100)))
+    node_ids = sorted(set(edges["account"]).union(edges["counterparty_account"]))
+    return {"nodes": [{"id": str(node), "label": str(node)} for node in node_ids], "edges": [{"source": str(row.account), "target": str(row.counterparty_account), "transactions": int(row.transaction_count), "amount": float(row.total_amount), "suspicious": int(row.suspicious_count)} for row in edges.itertuples(index=False)]}
 
 
 @app.get("/api/v1/account/{account_id}")
 def account(account_id: str):
-    raise HTTPException(status_code=404, detail=f"Account {account_id} is not loaded")
+    frame = transaction_frame()
+    if frame is None:
+        raise HTTPException(status_code=404, detail="Dataset is not loaded")
+    related = frame[(frame["account"] == account_id) | (frame["counterparty_account"] == account_id)]
+    if related.empty:
+        raise HTTPException(status_code=404, detail=f"Account {account_id} is not loaded")
+    return {"account": account_id, "transactions": int(len(related)), "suspicious_transactions": int(related["is_laundering"].sum()), "counterparties": int(pd.concat([related["account"], related["counterparty_account"]]).nunique() - 1), "total_volume": round(float(related["amount_received"].sum()), 2)}
