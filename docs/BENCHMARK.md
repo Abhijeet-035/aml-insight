@@ -21,6 +21,19 @@ python scripts/prepare_benchmark.py
 
 Preparation normalizes the IBM column names, validates numeric and label fields, sorts transactions by timestamp, assigns stable transaction IDs, and creates a chronological 60/20/20 train/validation/test split.
 
+## Historical features and baseline
+
+Build features after preparation:
+
+```bash
+python scripts/build_historical_features.py
+python ml/train_baseline.py
+```
+
+The feature builder emits transaction amount/time/currency features plus prior outgoing, incoming, and account-pair transaction counts and volumes. Historical aggregates are calculated from timestamps **strictly earlier** than the transaction being scored; transactions at the same timestamp are not allowed to affect each other.
+
+The XGBoost baseline trains only on the train period. It selects its operating threshold on the validation period, then reports PR-AUC, ROC-AUC, precision, recall, F1, and a confusion matrix on the held-out test period. The generated feature CSV, model file, and metrics JSON remain local-only.
+
 ## Leakage policy
 
 The benchmark must not randomly mix future transactions into training. Features that depend on transaction history must be computed using information available at or before the transaction timestamp. Model selection is performed on the validation period and final metrics are reported only on the held-out test period.

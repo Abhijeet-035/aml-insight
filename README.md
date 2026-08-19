@@ -24,7 +24,7 @@ The dashboard is now connected to the FastAPI data contract. When processed tran
 
 A transaction explorer is available at `/transactions`. The dataset validator is available through `scripts/validate_dataset.py` and the development roadmap is in `docs/ROADMAP.md`.
 
-The XGBoost baseline is implemented but generated model artifacts are intentionally excluded from Git. Reported benchmark metrics will only be produced from the IBM HI-Small dataset, not from the demo generator.
+The XGBoost baseline uses leakage-safe historical features and chronological train/validation/test evaluation. Generated feature files, model artifacts, and benchmark metrics are intentionally excluded from Git. Reported benchmark metrics will only be produced from the IBM HI-Small dataset, not from the demo generator.
 
 ## Local development
 
@@ -40,6 +40,9 @@ Validate the IBM dataset:
 
 ```bash
 python scripts/validate_dataset.py
+python scripts/prepare_benchmark.py
+python scripts/build_historical_features.py
+python ml/train_baseline.py
 ```
 
 Frontend:
