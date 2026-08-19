@@ -10,8 +10,10 @@ ROOT = Path(__file__).resolve().parents[3]
 MODEL_METRICS = ROOT / "models" / "metrics.json"
 PROCESSED = ROOT / "data" / "processed" / "transactions.csv"
 EDGES = ROOT / "data" / "processed" / "edges.csv"
+TYPOLOGY_ALERTS = ROOT / "data" / "processed" / "typology_alerts.csv"
+ACCOUNT_RISK_SCORES = ROOT / "data" / "processed" / "account_risk_scores.csv"
 
-app = FastAPI(title="AML Insight API", version="0.3.0")
+app = FastAPI(title="AML Insight API", version="0.4.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -33,6 +35,20 @@ def transaction_frame() -> pd.DataFrame | None:
         return None
     columns = ["transaction_id", "timestamp", "account", "counterparty_account", "amount_received", "receiving_currency", "payment_format", "is_laundering"]
     return pd.read_csv(PROCESSED, usecols=lambda column: column in columns)
+
+
+@lru_cache(maxsize=1)
+def typology_frame() -> pd.DataFrame | None:
+    if not TYPOLOGY_ALERTS.exists():
+        return None
+    return pd.read_csv(TYPOLOGY_ALERTS)
+
+
+@lru_cache(maxsize=1)
+def account_risk_frame() -> pd.DataFrame | None:
+    if not ACCOUNT_RISK_SCORES.exists():
+        return None
+    return pd.read_csv(ACCOUNT_RISK_SCORES)
 
 
 @app.get("/health")
@@ -62,6 +78,20 @@ def alerts(limit: int = 20):
     frame = transaction_frame()
     if frame is None:
         return []
+    typologies = typology_frame()
+    if typologies is not None:
+        candidates = typologies[typologies["typology_risk"] > 0].merge(
+            frame[["transaction_id", "amount_received", "receiving_currency"]], on="transaction_id", how="left"
+        ).sort_values(["typology_risk", "transaction_id"], ascending=[False, False]).head(max(1, min(limit, 100)))
+        return [{
+            "id": f"AML-{int(row.transaction_id):06d}",
+            "account": str(row.account),
+            "counterparty": str(row.counterparty_account),
+            "amount": float(row.amount_received),
+            "currency": str(row.receiving_currency),
+            "risk": float(row.typology_risk),
+            "pattern": str(row.typology_reasons),
+        } for row in candidates.itertuples(index=False)]
     suspicious = frame[frame["is_laundering"] == 1].sort_values("amount_received", ascending=False).head(max(1, min(limit, 100)))
     return [{"id": f"AML-{int(row.transaction_id):06d}", "account": str(row.account), "counterparty": str(row.counterparty_account), "amount": float(row.amount_received), "currency": str(row.receiving_currency), "risk": 90.0, "pattern": "Benchmark laundering transaction"} for row in suspicious.itertuples(index=False)]
 
@@ -83,4 +113,13 @@ def account(account_id: str):
     related = frame[(frame["account"] == account_id) | (frame["counterparty_account"] == account_id)]
     if related.empty:
         raise HTTPException(status_code=404, detail=f"Account {account_id} is not loaded")
-    return {"account": account_id, "transactions": int(len(related)), "suspicious_transactions": int(related["is_laundering"].sum()), "counterparties": int(pd.concat([related["account"], related["counterparty_account"]]).nunique() - 1), "total_volume": round(float(related["amount_received"].sum()), 2)}
+    result = {"account": account_id, "transactions": int(len(related)), "suspicious_transactions": int(related["is_laundering"].sum()), "counterparties": int(pd.concat([related["account"], related["counterparty_account"]]).nunique() - 1), "total_volume": round(float(related["amount_received"].sum()), 2)}
+    account_scores = account_risk_frame()
+    if account_scores is not None:
+        match = account_scores[account_scores["account"].astype(str) == account_id]
+        if not match.empty:
+            score = match.iloc[0]
+            result["typology_risk"] = float(score.typology_risk)
+            result["typology_alert_count"] = int(score.alert_count)
+            result["typology_reasons"] = str(score.reasons)
+    return result

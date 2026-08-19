@@ -43,6 +43,7 @@ python scripts/validate_dataset.py
 python scripts/prepare_benchmark.py
 python scripts/build_historical_features.py
 python ml/train_baseline.py
+python scripts/score_typologies.py
 ```
 
 Frontend:

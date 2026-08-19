@@ -34,6 +34,16 @@ The feature builder emits transaction amount/time/currency features plus prior o
 
 The XGBoost baseline trains only on the train period. It selects its operating threshold on the validation period, then reports PR-AUC, ROC-AUC, precision, recall, F1, and a confusion matrix on the held-out test period. The generated feature CSV, model file, and metrics JSON remain local-only.
 
+## Explainable typology alerts
+
+Run the rule engine after benchmark preparation:
+
+```bash
+python scripts/score_typologies.py
+```
+
+It writes local-only transaction alerts, account risk summaries, and the fitted rule configuration. The rules identify fan-in, fan-out, rapid movement, structuring, cross-currency layering, reciprocal/circular flows, and high-value transfers. Each reason is tied to the observed historical activity. Rule thresholds are fitted from the train period only, and transactions sharing a timestamp are scored before any are added to history.
+
 ## Leakage policy
 
 The benchmark must not randomly mix future transactions into training. Features that depend on transaction history must be computed using information available at or before the transaction timestamp. Model selection is performed on the validation period and final metrics are reported only on the held-out test period.
