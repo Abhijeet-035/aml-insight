@@ -5,7 +5,22 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "data" / "processed" / "historical_features.csv"
+TRANSACTIONS_SOURCE = ROOT / "data" / "processed" / "transactions.csv"
 DATABASE = ROOT / "data" / "processed" / "historical_features.db"
+
+METADATA_COLUMNS = [
+    "transaction_id",
+    "timestamp",
+    "from_bank",
+    "account",
+    "to_bank",
+    "counterparty_account",
+    "amount_received",
+    "receiving_currency",
+    "amount_paid",
+    "payment_currency",
+    "payment_format",
+]
 
 COLUMNS = [
     "transaction_id",
@@ -52,6 +67,21 @@ CREATE TABLE historical_features (
     pair_prior_amount REAL NOT NULL
 )
 """
+CREATE_METADATA_TABLE = """
+CREATE TABLE transaction_metadata (
+    transaction_id INTEGER PRIMARY KEY,
+    timestamp TEXT NOT NULL,
+    from_bank INTEGER NOT NULL,
+    account TEXT NOT NULL,
+    to_bank INTEGER NOT NULL,
+    counterparty_account TEXT NOT NULL,
+    amount_received REAL NOT NULL,
+    receiving_currency TEXT NOT NULL,
+    amount_paid REAL NOT NULL,
+    payment_currency TEXT NOT NULL,
+    payment_format TEXT NOT NULL
+)
+"""
 
 if not SOURCE.exists():
     raise FileNotFoundError(f"Source file not found: {SOURCE}")
@@ -61,6 +91,7 @@ if DATABASE.exists():
 
 connection = sqlite3.connect(DATABASE)
 connection.execute(CREATE_TABLE)
+connection.execute(CREATE_METADATA_TABLE)
 
 rows_loaded = 0
 
@@ -72,14 +103,24 @@ for chunk in pd.read_csv(SOURCE, usecols=COLUMNS, chunksize=100_000):
         index=False,
     )
     rows_loaded += len(chunk)
-    print(f"Loaded {rows_loaded:,} rows")
+    print(f"Loaded features: {rows_loaded:,} rows")
 
-connection.execute(
-    "CREATE INDEX idx_historical_features_transaction_id "
-    "ON historical_features(transaction_id)"
-)
+metadata_rows_loaded = 0
+
+for chunk in pd.read_csv(TRANSACTIONS_SOURCE, usecols=METADATA_COLUMNS, chunksize=100_000):
+    chunk.to_sql(
+        "transaction_metadata",
+        connection,
+        if_exists="append",
+        index=False,
+    )
+    metadata_rows_loaded += len(chunk)
+    print(f"Loaded metadata: {metadata_rows_loaded:,} rows")
+
+
 connection.commit()
 connection.close()
 
 print(f"Created {DATABASE}")
-print(f"Rows: {rows_loaded:,}")
+print(f"Feature rows: {rows_loaded:,}")
+print(f"Metadata rows: {metadata_rows_loaded:,}")

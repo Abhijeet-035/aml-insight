@@ -5,6 +5,7 @@ import json
 import joblib
 import numpy as np
 import pandas as pd
+import sqlite3
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[3]
 MODEL_METRICS = ROOT / "models" / "metrics.json"
 MODEL_PATH = ROOT / "models" / "transaction_risk_xgb.joblib"
 PROCESSED = ROOT / "data" / "processed" / "transactions.csv"
+FEATURE_STORE = ROOT / "data" / "processed" / "historical_features.db"
 EDGES = ROOT / "data" / "processed" / "edges.csv"
 TYPOLOGY_ALERTS = ROOT / "data" / "processed" / "typology_alerts.csv"
 ACCOUNT_RISK_SCORES = ROOT / "data" / "processed" / "account_risk_scores.csv"
@@ -55,6 +57,44 @@ def risk_model():
     if not MODEL_PATH.exists():
         return None
     return joblib.load(MODEL_PATH)
+
+def feature_store_row(transaction_id: int) -> dict | None:
+    if not FEATURE_STORE.exists():
+        return None
+
+    connection = sqlite3.connect(FEATURE_STORE)
+    connection.row_factory = sqlite3.Row
+
+    row = connection.execute(
+        "SELECT * FROM historical_features WHERE transaction_id = ?",
+        (transaction_id,),
+    ).fetchone()
+
+    connection.close()
+
+    if row is None:
+        return None
+
+    return dict(row)
+
+def transaction_metadata_row(transaction_id: int) -> dict | None:
+    if not FEATURE_STORE.exists():
+        return None
+
+    connection = sqlite3.connect(FEATURE_STORE)
+    connection.row_factory = sqlite3.Row
+
+    row = connection.execute(
+        "SELECT * FROM transaction_metadata WHERE transaction_id = ?",
+        (transaction_id,),
+    ).fetchone()
+
+    connection.close()
+
+    if row is None:
+        return None
+
+    return dict(row)
 
 class PredictionRequest(BaseModel):
     amount_paid: float
@@ -122,6 +162,18 @@ def overview():
 def model():
     return model_status()
 
+@app.get("/api/v1/transaction/{transaction_id}")
+def transaction(transaction_id: int):
+    row = feature_store_row(transaction_id)
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Transaction feature record not found",
+        )
+
+    return row
+
 @app.post("/api/v1/predict")
 def predict(request: PredictionRequest):
     model = risk_model()
@@ -145,6 +197,62 @@ def predict(request: PredictionRequest):
         "threshold": threshold,
         "prediction": int(probability >= threshold),
     }
+
+@app.post("/api/v1/transaction/{transaction_id}/predict")
+def predict_transaction(transaction_id: int):
+    model = risk_model()
+
+    if model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Risk model is not available",
+        )
+
+    row = feature_store_row(transaction_id)
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Transaction feature record not found",
+        )
+    metadata = transaction_metadata_row(transaction_id)
+
+    if metadata is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Transaction metadata not found",
+        )
+
+    features = pd.DataFrame(
+        [[row[feature] for feature in MODEL_FEATURES]],
+        columns=MODEL_FEATURES,
+    )
+
+    probability = float(model.predict_proba(features)[0, 1])
+    status = model_status()
+    threshold = float(status["metrics"]["selected_threshold"])
+
+    return {
+    "transaction": {
+        "transaction_id": metadata["transaction_id"],
+        "timestamp": metadata["timestamp"],
+        "from_bank": metadata["from_bank"],
+        "account": metadata["account"],
+        "to_bank": metadata["to_bank"],
+        "counterparty_account": metadata["counterparty_account"],
+        "amount_received": metadata["amount_received"],
+        "receiving_currency": metadata["receiving_currency"],
+        "amount_paid": metadata["amount_paid"],
+        "payment_currency": metadata["payment_currency"],
+        "payment_format": metadata["payment_format"],
+    },
+    "risk": {
+        "risk_probability": probability,
+        "risk_score": round(probability * 100, 2),
+        "threshold": threshold,
+        "prediction": int(probability >= threshold),
+    },
+}
 
 @app.get("/api/v1/alerts")
 def alerts(limit: int = 20):
