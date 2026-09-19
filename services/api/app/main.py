@@ -266,6 +266,7 @@ def alerts(limit: int = 20):
         ).sort_values(["typology_risk", "transaction_id"], ascending=[False, False]).head(max(1, min(limit, 100)))
         return [{
             "id": f"AML-{int(row.transaction_id):06d}",
+            "transaction_id": int(row.transaction_id),
             "account": str(row.account),
             "counterparty": str(row.counterparty_account),
             "amount": float(row.amount_received),
@@ -274,8 +275,7 @@ def alerts(limit: int = 20):
             "pattern": str(row.typology_reasons),
         } for row in candidates.itertuples(index=False)]
     suspicious = frame[frame["is_laundering"] == 1].sort_values("amount_received", ascending=False).head(max(1, min(limit, 100)))
-    return [{"id": f"AML-{int(row.transaction_id):06d}", "account": str(row.account), "counterparty": str(row.counterparty_account), "amount": float(row.amount_received), "currency": str(row.receiving_currency), "risk": 90.0, "pattern": "Benchmark laundering transaction"} for row in suspicious.itertuples(index=False)]
-
+    return [{"id": f"AML-{int(row.transaction_id):06d}", "transaction_id": int(row.transaction_id), "account": str(row.account), "counterparty": str(row.counterparty_account), "amount": float(row.amount_received), "currency": str(row.receiving_currency), "risk": 90.0, "pattern": "Benchmark laundering transaction"} for row in suspicious.itertuples(index=False)]
 
 @app.get("/api/v1/network")
 def network(limit: int = 20):
