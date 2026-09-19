@@ -12,6 +12,7 @@ PROCESSED = ROOT / "data" / "processed" / "transactions.csv"
 EDGES = ROOT / "data" / "processed" / "edges.csv"
 TYPOLOGY_ALERTS = ROOT / "data" / "processed" / "typology_alerts.csv"
 ACCOUNT_RISK_SCORES = ROOT / "data" / "processed" / "account_risk_scores.csv"
+ACCOUNT_GRAPH_FEATURES = ROOT / "data" / "processed" / "account_graph_features.csv"
 
 app = FastAPI(title="AML Insight API", version="0.4.0")
 app.add_middleware(
@@ -49,6 +50,12 @@ def account_risk_frame() -> pd.DataFrame | None:
     if not ACCOUNT_RISK_SCORES.exists():
         return None
     return pd.read_csv(ACCOUNT_RISK_SCORES)
+
+@lru_cache(maxsize=1)
+def account_graph_frame() -> pd.DataFrame | None:
+    if not ACCOUNT_GRAPH_FEATURES.exists():
+        return None
+    return pd.read_csv(ACCOUNT_GRAPH_FEATURES)
 
 
 @app.get("/health")
@@ -122,4 +129,15 @@ def account(account_id: str):
             result["typology_risk"] = float(score.typology_risk)
             result["typology_alert_count"] = int(score.alert_count)
             result["typology_reasons"] = str(score.reasons)
+    
+    account_graph = account_graph_frame()
+    if account_graph is not None:
+        match = account_graph[account_graph["account"].astype(str) == account_id]
+        if not match.empty:
+            graph = match.iloc[0]
+            result["in_degree"] = int(graph.in_degree)
+            result["out_degree"] = int(graph.out_degree)
+            result["pagerank"] = float(graph.pagerank)
+            
     return result
+

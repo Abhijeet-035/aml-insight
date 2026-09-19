@@ -38,7 +38,7 @@ def build_historical_features(transactions: pd.DataFrame) -> pd.DataFrame:
         raise ValueError(f"Missing required transaction columns: {missing}")
 
     frame = transactions.copy()
-    frame["timestamp"] = pd.to_datetime(frame["timestamp"], errors="raise")
+    frame["timestamp"] = pd.to_datetime(frame["timestamp"], format="mixed", errors="raise")
     frame = frame.sort_values(["timestamp", "transaction_id"], kind="stable").reset_index(drop=True)
     result = frame[["transaction_id", "timestamp", "split", "is_laundering", "account", "counterparty_account"]].copy()
     result["amount_paid"] = pd.to_numeric(frame["amount_paid"], errors="raise")
