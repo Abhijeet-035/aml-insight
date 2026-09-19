@@ -2,17 +2,38 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 import json
+import joblib
+import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 ROOT = Path(__file__).resolve().parents[3]
 MODEL_METRICS = ROOT / "models" / "metrics.json"
+MODEL_PATH = ROOT / "models" / "transaction_risk_xgb.joblib"
 PROCESSED = ROOT / "data" / "processed" / "transactions.csv"
 EDGES = ROOT / "data" / "processed" / "edges.csv"
 TYPOLOGY_ALERTS = ROOT / "data" / "processed" / "typology_alerts.csv"
 ACCOUNT_RISK_SCORES = ROOT / "data" / "processed" / "account_risk_scores.csv"
 ACCOUNT_GRAPH_FEATURES = ROOT / "data" / "processed" / "account_graph_features.csv"
+MODEL_FEATURES = [
+    "amount_paid",
+    "amount_received",
+    "log_amount_paid",
+    "log_amount_received",
+    "amount_delta",
+    "amount_ratio",
+    "hour",
+    "day_of_week",
+    "is_cross_currency",
+    "outgoing_prior_count",
+    "outgoing_prior_amount",
+    "incoming_prior_count",
+    "incoming_prior_amount",
+    "pair_prior_count",
+    "pair_prior_amount",
+]
 
 app = FastAPI(title="AML Insight API", version="0.4.0")
 app.add_middleware(
@@ -29,6 +50,28 @@ def model_status() -> dict:
         return {"status": "not_trained", "metrics": None}
     return {"status": "trained", "metrics": json.loads(MODEL_METRICS.read_text())}
 
+@lru_cache(maxsize=1)
+def risk_model():
+    if not MODEL_PATH.exists():
+        return None
+    return joblib.load(MODEL_PATH)
+
+class PredictionRequest(BaseModel):
+    amount_paid: float
+    amount_received: float
+    log_amount_paid: float
+    log_amount_received: float
+    amount_delta: float
+    amount_ratio: float
+    hour: int
+    day_of_week: int
+    is_cross_currency: int
+    outgoing_prior_count: int
+    outgoing_prior_amount: float
+    incoming_prior_count: int
+    incoming_prior_amount: float
+    pair_prior_count: int
+    pair_prior_amount: float
 
 @lru_cache(maxsize=1)
 def transaction_frame() -> pd.DataFrame | None:
@@ -79,6 +122,29 @@ def overview():
 def model():
     return model_status()
 
+@app.post("/api/v1/predict")
+def predict(request: PredictionRequest):
+    model = risk_model()
+
+    if model is None:
+        raise HTTPException(status_code=503, detail="Risk model is not available")
+
+    features = pd.DataFrame(
+        [[getattr(request, feature) for feature in MODEL_FEATURES]],
+        columns=MODEL_FEATURES,
+    )
+
+    probability = float(model.predict_proba(features)[0, 1])
+
+    status = model_status()
+    threshold = float(status["metrics"]["selected_threshold"])
+
+    return {
+        "risk_probability": probability,
+        "risk_score": round(probability * 100, 2),
+        "threshold": threshold,
+        "prediction": int(probability >= threshold),
+    }
 
 @app.get("/api/v1/alerts")
 def alerts(limit: int = 20):
@@ -138,6 +204,6 @@ def account(account_id: str):
             result["in_degree"] = int(graph.in_degree)
             result["out_degree"] = int(graph.out_degree)
             result["pagerank"] = float(graph.pagerank)
-            
+
     return result
 
