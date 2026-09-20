@@ -3844,3 +3844,47 @@ button {
         width: 100%;
     }
 }
+
+
+.investigationCaseMetrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.investigationCaseMetric {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.investigationCaseMetric span {
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.investigationCaseMetric strong {
+    color: var(--ink);
+    font-size: 17px;
+}
+
+@media (max-width: 900px) {
+    .investigationCaseMetrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .investigationCaseMetrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
