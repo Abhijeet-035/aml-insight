@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Transaction = {
   transaction_id: number;
@@ -39,48 +39,7 @@ type TransactionReview = {
   }[];
 };
 
-const fallback: Alert[] = [
-  {
-    id: "AML-00128",
-    transaction_id: 128,
-    account: "ACC-8000A",
-    counterparty: "ACC-1932F",
-    amount: 182400,
-    currency: "USD",
-    risk: 94.2,
-    pattern: "Fan-out",
-  },
-  {
-    id: "AML-00127",
-    transaction_id: 127,
-    account: "ACC-1932F",
-    counterparty: "ACC-5B821",
-    amount: 91400,
-    currency: "EUR",
-    risk: 91.3,
-    pattern: "Layering",
-  },
-  {
-    id: "AML-00126",
-    transaction_id: 126,
-    account: "ACC-5B821",
-    counterparty: "ACC-74D20",
-    amount: 78200,
-    currency: "GBP",
-    risk: 88.7,
-    pattern: "Cycle",
-  },
-  {
-    id: "AML-00125",
-    transaction_id: 125,
-    account: "ACC-74D20",
-    counterparty: "ACC-9F221",
-    amount: 64300,
-    currency: "USD",
-    risk: 84.1,
-    pattern: "Fan-in",
-  },
-];
+
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
