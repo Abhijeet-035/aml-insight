@@ -709,6 +709,12 @@ export default function Home() {
   return <main>
     <aside><div className="brand"><div className="brandMark">A</div><div><strong>AML Insight</strong><small>Transaction Intelligence</small></div></div><nav>
           <a className="active" href="/">Overview</a>
+          <a href="/transactions">Transactions</a>
+          <a href="/predict">Predict</a>
+          <a href="/network">Network</a>
+          <a href="/alerts">Alerts</a>
+          <a href="/investigations">Investigations</a>
+          <a href="/models">Models</a>
         </nav><div className="sidebarBottom"><span>IBM AML Benchmark</span><span>{overview.data_status === "processed_dataset" ? "HI-Small loaded" : "Demo mode"}</span></div></aside>
     <section className="content">
       <header><div><p className="eyebrow">ANTI-MONEY LAUNDERING</p><h1>Investigation command center</h1><p className="subtitle">Detect suspicious transaction behavior across connected financial networks.</p></div><div className="headerActions"><button>Export</button><button className="primary">New investigation</button></div></header>
