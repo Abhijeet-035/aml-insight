@@ -416,6 +416,34 @@ def create_investigation(request: InvestigationCreate):
     return investigation_record(row)
 
 
+@app.get("/api/v1/investigations")
+def list_investigations(account_id: str | None = None):
+    connection = investigation_connection()
+
+    if account_id:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM investigations
+            WHERE account_id = ?
+            ORDER BY updated_at DESC
+            """,
+            (account_id.strip(),),
+        ).fetchall()
+    else:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM investigations
+            ORDER BY updated_at DESC
+            """
+        ).fetchall()
+
+    connection.close()
+
+    return [investigation_record(row) for row in rows]
+
+
 @app.get("/api/v1/investigations/{investigation_id}")
 def get_investigation(investigation_id: str):
     connection = investigation_connection()
