@@ -102,12 +102,12 @@ export default function TransactionsPage() {
 
         <nav>
           <a href="/">Overview</a>
-          <a className="active">Transactions</a>
+          <a className="active" href="/transactions">Transactions</a>
           <a href="/predict">Predict</a>
-          <a>Network</a>
-          <a>Alerts</a>
-          <a>Investigations</a>
-          <a>Models</a>
+          <a href="/network">Network</a>
+          <a href="/alerts">Alerts</a>
+          <a href="/investigations">Investigations</a>
+          <a href="/models">Models</a>
         </nav>
 
         <div className="sidebarBottom">
