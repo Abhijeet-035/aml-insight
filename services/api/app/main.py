@@ -6,6 +6,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import sqlite3
+import uuid
 import xgboost as xgb
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -20,6 +21,7 @@ EDGES = ROOT / "data" / "processed" / "edges.csv"
 TYPOLOGY_ALERTS = ROOT / "data" / "processed" / "typology_alerts.csv"
 ACCOUNT_RISK_SCORES = ROOT / "data" / "processed" / "account_risk_scores.csv"
 ACCOUNT_GRAPH_FEATURES = ROOT / "data" / "processed" / "account_graph_features.csv"
+INVESTIGATIONS_DB = ROOT / "data" / "processed" / "investigations.db"
 MODEL_FEATURES = [
     "amount_paid",
     "amount_received",
@@ -46,6 +48,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def investigation_connection():
+    INVESTIGATIONS_DB.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(INVESTIGATIONS_DB)
+    connection.row_factory = sqlite3.Row
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS investigations (
+            id TEXT PRIMARY KEY,
+            account_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            notes TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.commit()
+    return connection
+
+
+def investigation_record(row: sqlite3.Row) -> dict:
+    return {
+        "id": row["id"],
+        "account_id": row["account_id"],
+        "status": row["status"],
+        "notes": row["notes"],
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
 
 
 def model_status() -> dict:
@@ -97,6 +129,16 @@ def transaction_metadata_row(transaction_id: int) -> dict | None:
 
     return dict(row)
 
+class InvestigationCreate(BaseModel):
+    account_id: str
+    notes: str = ""
+
+
+class InvestigationUpdate(BaseModel):
+    status: str | None = None
+    notes: str | None = None
+
+
 class PredictionRequest(BaseModel):
     amount_paid: float
     amount_received: float
@@ -145,6 +187,169 @@ def account_graph_frame() -> pd.DataFrame | None:
 @app.get("/health")
 def health():
     return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+@app.post("/api/v1/investigations")
+def create_investigation(request: InvestigationCreate):
+    account_id = request.account_id.strip()
+
+    if not account_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Account ID is required",
+        )
+
+    frame = transaction_frame()
+
+    if frame is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Dataset is not loaded",
+        )
+
+    related = frame[
+        (frame["account"] == account_id)
+        | (frame["counterparty_account"] == account_id)
+    ]
+
+    if related.empty:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Account {account_id} is not loaded",
+        )
+
+    now = datetime.now(timezone.utc).isoformat()
+    investigation_id = (
+        f"INV-{datetime.now(timezone.utc):%Y%m%d}-"
+        f"{uuid.uuid4().hex[:6].upper()}"
+    )
+
+    connection = investigation_connection()
+
+    connection.execute(
+        """
+        INSERT INTO investigations (
+            id,
+            account_id,
+            status,
+            notes,
+            created_at,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            investigation_id,
+            account_id,
+            "Open",
+            request.notes.strip(),
+            now,
+            now,
+        ),
+    )
+
+    connection.commit()
+
+    row = connection.execute(
+        "SELECT * FROM investigations WHERE id = ?",
+        (investigation_id,),
+    ).fetchone()
+
+    connection.close()
+
+    return investigation_record(row)
+
+
+@app.get("/api/v1/investigations/{investigation_id}")
+def get_investigation(investigation_id: str):
+    connection = investigation_connection()
+
+    row = connection.execute(
+        "SELECT * FROM investigations WHERE id = ?",
+        (investigation_id,),
+    ).fetchone()
+
+    connection.close()
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Investigation was not found",
+        )
+
+    return investigation_record(row)
+
+
+@app.patch("/api/v1/investigations/{investigation_id}")
+def update_investigation(
+    investigation_id: str,
+    request: InvestigationUpdate,
+):
+    allowed_statuses = {
+        "Open",
+        "In Review",
+        "Escalated",
+        "Closed",
+    }
+
+    if request.status is not None and request.status not in allowed_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid investigation status",
+        )
+
+    connection = investigation_connection()
+
+    existing = connection.execute(
+        "SELECT * FROM investigations WHERE id = ?",
+        (investigation_id,),
+    ).fetchone()
+
+    if existing is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Investigation was not found",
+        )
+
+    status = (
+        request.status
+        if request.status is not None
+        else existing["status"]
+    )
+
+    notes = (
+        request.notes
+        if request.notes is not None
+        else existing["notes"]
+    )
+
+    updated_at = datetime.now(timezone.utc).isoformat()
+
+    connection.execute(
+        """
+        UPDATE investigations
+        SET status = ?, notes = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            status,
+            notes,
+            updated_at,
+            investigation_id,
+        ),
+    )
+
+    connection.commit()
+
+    row = connection.execute(
+        "SELECT * FROM investigations WHERE id = ?",
+        (investigation_id,),
+    ).fetchone()
+
+    connection.close()
+
+    return investigation_record(row)
 
 
 @app.get("/api/v1/overview")
