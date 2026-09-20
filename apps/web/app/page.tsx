@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type PointerEvent, type WheelEvent, useEffect, useRef, useState } from "react";
 
 type Overview = { transactions: number; alerts: number; suspicious_rate: number; network_nodes: number; risk_volume: number; model_status: string; data_status: string };
 type Alert = { id: string; account: string; counterparty: string; amount: number; currency: string; risk: number; pattern: string };
@@ -18,19 +18,26 @@ const formatNumber = (value: number) => new Intl.NumberFormat("en-US", { notatio
 const formatMoney = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: value >= 1000000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(value);
 
 function Network({ data }: { data: Network | null }) {
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [selectedAccount, setSelectedAccount] = useState("");
+  const [accountDetails, setAccountDetails] = useState<Record<string, unknown> | null>(null);
+  const [accountNetwork, setAccountNetwork] = useState<Network | null>(null);
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef({
+    active: false,
+    moved: false,
+    startX: 0,
+    startY: 0,
+    panX: 0,
+    panY: 0,
+  });
+
   const edges = data?.edges ?? [];
   const nodes = data?.nodes ?? [];
-
-  if (!nodes.length || !edges.length) {
-    return (
-      <div className="network networkGraph networkGraphEmpty">
-        <div className="networkEmptyState">
-          <strong>Network pending</strong>
-          <span>Load processed data</span>
-        </div>
-      </div>
-    );
-  }
 
   const connectionCounts = new Map<string, number>();
 
@@ -46,9 +53,85 @@ function Network({ data }: { data: Network | null }) {
     );
   });
 
-  const focusNode = [...connectionCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .at(0)?.[0] ?? nodes[0].id;
+  const focusNode =
+    [...connectionCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .at(0)?.[0] ?? nodes[0]?.id ?? "";
+
+  useEffect(() => {
+    if (!selectedAccount && focusNode) {
+      setSelectedAccount(focusNode);
+    }
+  }, [focusNode, selectedAccount]);
+
+  useEffect(() => {
+    if (!selectedAccount) {
+      return;
+    }
+
+    const base =
+      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+    setAccountLoading(true);
+
+    Promise.all([
+      fetch(`${base}/api/v1/account/${encodeURIComponent(selectedAccount)}`),
+      fetch(
+        `${base}/api/v1/account/${encodeURIComponent(selectedAccount)}/network?limit=20`,
+      ),
+    ])
+      .then(async ([accountResponse, networkResponse]) => {
+        if (accountResponse.ok) {
+          setAccountDetails(await accountResponse.json());
+        } else {
+          setAccountDetails(null);
+        }
+
+        if (networkResponse.ok) {
+          setAccountNetwork(await networkResponse.json());
+        } else {
+          setAccountNetwork(null);
+        }
+      })
+      .catch(() => {
+        setAccountDetails(null);
+        setAccountNetwork(null);
+      })
+      .finally(() => {
+        setAccountLoading(false);
+      });
+  }, [selectedAccount]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(
+        document.fullscreenElement === viewportRef.current,
+      );
+    };
+
+    document.addEventListener(
+      "fullscreenchange",
+      handleFullscreenChange,
+    );
+
+    return () => {
+      document.removeEventListener(
+        "fullscreenchange",
+        handleFullscreenChange,
+      );
+    };
+  }, []);
+
+  if (!nodes.length || !edges.length) {
+    return (
+      <div className="network networkGraph networkGraphEmpty">
+        <div className="networkEmptyState">
+          <strong>Network pending</strong>
+          <span>Load processed data</span>
+        </div>
+      </div>
+    );
+  }
 
   const relatedEdges = edges
     .filter(
@@ -110,142 +193,382 @@ function Network({ data }: { data: Network | null }) {
     0,
   );
 
+  const clampPan = (value: number, nextZoom = zoom) => {
+    const maxPan = Math.max(0, (nextZoom - 1) * 310 + 90);
+
+    return Math.max(-maxPan, Math.min(maxPan, value));
+  };
+
+  const updateZoom = (nextZoom: number) => {
+    const value = Math.max(0.6, Math.min(2.5, nextZoom));
+
+    setZoom(Number(value.toFixed(2)));
+    setPan((current) => ({
+      x: clampPan(current.x, value),
+      y: clampPan(current.y, value),
+    }));
+  };
+
+  const zoomIn = () => {
+    updateZoom(zoom + 0.1);
+  };
+
+  const zoomOut = () => {
+    updateZoom(zoom - 0.1);
+  };
+
+  const resetGraph = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const handleGraphWheel = (event: WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    if (event.deltaY < 0) {
+      updateZoom(zoom + 0.1);
+    } else {
+      updateZoom(zoom - 0.1);
+    }
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    dragRef.current = {
+      active: true,
+      moved: false,
+      startX: event.clientX,
+      startY: event.clientY,
+      panX: pan.x,
+      panY: pan.y,
+    };
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active || !viewportRef.current) {
+      return;
+    }
+
+    const deltaX = event.clientX - dragRef.current.startX;
+    const deltaY = event.clientY - dragRef.current.startY;
+
+    if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+      dragRef.current.moved = true;
+    }
+
+    const rect = viewportRef.current.getBoundingClientRect();
+    const scaleX = 620 / Math.max(rect.width, 1) / zoom;
+    const scaleY = 300 / Math.max(rect.height, 1) / zoom;
+
+    setPan({
+      x: clampPan(
+        dragRef.current.panX + deltaX * scaleX,
+      ),
+      y: clampPan(
+        dragRef.current.panY + deltaY * scaleY,
+      ),
+    });
+  };
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active) {
+      return;
+    }
+
+    dragRef.current.active = false;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const handleNodeClick = (accountId: string) => {
+    if (dragRef.current.moved) {
+      dragRef.current.moved = false;
+      return;
+    }
+
+    setSelectedAccount(accountId);
+  };
+
+  const toggleFullscreen = async () => {
+    if (!viewportRef.current) {
+      return;
+    }
+
+    if (document.fullscreenElement === viewportRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await viewportRef.current.requestFullscreen();
+  };
+
+  const accountValue = (key: string) =>
+    accountDetails?.[key] as number | string | undefined;
+
+  const accountTransactions =
+    Number(accountValue("transactions")) || 0;
+
+  const accountSuspicious =
+    Number(accountValue("suspicious_transactions")) || 0;
+
+  const accountCounterparties =
+    Number(accountValue("counterparties")) || 0;
+
+  const accountVolume =
+    Number(accountValue("total_volume")) || 0;
+
+  const accountInDegree =
+    Number(accountValue("in_degree")) || 0;
+
+  const accountOutDegree =
+    Number(accountValue("out_degree")) || 0;
+
+  const accountPagerank =
+    Number(accountValue("pagerank")) || 0;
+
+  const accountTypologyRisk =
+    Number(accountValue("typology_risk")) || 0;
+
+  const accountTypologyReasons =
+    String(accountValue("typology_reasons") ?? "No typology signal");
+
   return (
     <div className="network networkGraph">
-      <svg
-        className="networkSvg"
-        viewBox="0 0 620 300"
-        role="img"
-        aria-label="Suspicious transaction relationship map"
+      <div
+        ref={viewportRef}
+        className={[
+          "networkGraphViewport",
+          isFullscreen ? "fullscreen" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        onWheel={handleGraphWheel}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
-        <defs>
-          <marker
-            id="networkArrow"
-            viewBox="0 0 10 10"
-            refX="9"
-            refY="5"
-            markerWidth="5"
-            markerHeight="5"
-            orient="auto-start-reverse"
+        <div
+          className="networkGraphControls"
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+          onWheel={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          <button
+            type="button"
+            onClick={zoomOut}
+            aria-label="Zoom out"
           >
-            <path
-              d="M 0 0 L 10 5 L 0 10 z"
-              className="networkArrow"
-            />
-          </marker>
+            −
+          </button>
 
-          <marker
-            id="networkSuspiciousArrow"
-            viewBox="0 0 10 10"
-            refX="9"
-            refY="5"
-            markerWidth="5"
-            markerHeight="5"
-            orient="auto-start-reverse"
+          <button
+            type="button"
+            onClick={resetGraph}
+            className="networkZoomValue"
+            aria-label="Reset graph zoom and position"
           >
-            <path
-              d="M 0 0 L 10 5 L 0 10 z"
-              className="networkSuspiciousArrow"
-            />
-          </marker>
-        </defs>
+            {Math.round(zoom * 100)}%
+          </button>
 
-        {relatedEdges.map((edge) => {
-          const source = getNode(edge.source);
-          const target = getNode(edge.target);
+          <button
+            type="button"
+            onClick={zoomIn}
+            aria-label="Zoom in"
+          >
+            +
+          </button>
 
-          if (!source || !target) {
-            return null;
-          }
+          <span className="networkGraphControlDivider" />
 
-          const strokeWidth = Math.min(
-            5,
-            1.5 + Math.log10(edge.transactions + 1),
-          );
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            aria-label={
+              isFullscreen
+                ? "Exit fullscreen"
+                : "Open graph in fullscreen"
+            }
+          >
+            {isFullscreen ? "×" : "⛶"}
+          </button>
+        </div>
 
-          const suspicious = edge.suspicious > 0;
-
-          return (
-            <line
-              key={`${edge.source}-${edge.target}`}
-              className={
-                suspicious
-                  ? "networkEdge suspicious"
-                  : "networkEdge"
-              }
-              x1={source.x}
-              y1={source.y}
-              x2={target.x}
-              y2={target.y}
-              strokeWidth={strokeWidth}
-              markerEnd={
-                suspicious
-                  ? "url(#networkSuspiciousArrow)"
-                  : "url(#networkArrow)"
-              }
-            />
-          );
-        })}
-
-        {graphNodes.map((node) => {
-          const nodeEdges = relatedEdges.filter(
-            (edge) =>
-              edge.source === node.id ||
-              edge.target === node.id,
-          );
-
-          const nodeTransactions = nodeEdges.reduce(
-            (total, edge) =>
-              total + edge.transactions,
-            0,
-          );
-
-          const nodeSuspicious = nodeEdges.reduce(
-            (total, edge) =>
-              total + edge.suspicious,
-            0,
-          );
-
-          return (
-            <g
-              key={node.id}
-              className={
-                node.central
-                  ? "networkSvgNode central"
-                  : "networkSvgNode"
-              }
+        <svg
+          className="networkSvg"
+          viewBox="0 0 620 300"
+          role="img"
+          aria-label="Interactive suspicious transaction relationship map"
+        >
+          <defs>
+            <marker
+              id="networkArrow"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="5"
+              markerHeight="5"
+              orient="auto-start-reverse"
             >
-              <rect
-                x={node.x - 66}
-                y={node.y - 23}
-                width="132"
-                height="46"
-                rx="9"
+              <path
+                d="M 0 0 L 10 5 L 0 10 z"
+                className="networkArrow"
               />
+            </marker>
 
-              <text
-                x={node.x}
-                y={node.y - 3}
-                textAnchor="middle"
-                className="networkNodeLabel"
-              >
-                {node.id}
-              </text>
+            <marker
+              id="networkSuspiciousArrow"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="5"
+              markerHeight="5"
+              orient="auto-start-reverse"
+            >
+              <path
+                d="M 0 0 L 10 5 L 0 10 z"
+                className="networkSuspiciousArrow"
+              />
+            </marker>
+          </defs>
 
-              <text
-                x={node.x}
-                y={node.y + 12}
-                textAnchor="middle"
-                className="networkNodeMeta"
-              >
-                {node.central
-                  ? `${nodeSuspicious} suspicious`
-                  : `${nodeTransactions} transactions`}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+          <g
+            transform={`translate(${pan.x} ${pan.y}) translate(310 150) scale(${zoom}) translate(-310 -150)`}
+          >
+            {relatedEdges.map((edge) => {
+              const source = getNode(edge.source);
+              const target = getNode(edge.target);
+
+              if (!source || !target) {
+                return null;
+              }
+
+              const strokeWidth = Math.min(
+                5,
+                1.5 + Math.log10(edge.transactions + 1),
+              );
+
+              const suspicious = edge.suspicious > 0;
+
+              return (
+                <line
+                  key={`${edge.source}-${edge.target}`}
+                  className={
+                    suspicious
+                      ? "networkEdge suspicious"
+                      : "networkEdge"
+                  }
+                  x1={source.x}
+                  y1={source.y}
+                  x2={target.x}
+                  y2={target.y}
+                  strokeWidth={strokeWidth}
+                  markerEnd={
+                    suspicious
+                      ? "url(#networkSuspiciousArrow)"
+                      : "url(#networkArrow)"
+                  }
+                />
+              );
+            })}
+
+            {graphNodes.map((node) => {
+              const nodeEdges = relatedEdges.filter(
+                (edge) =>
+                  edge.source === node.id ||
+                  edge.target === node.id,
+              );
+
+              const nodeTransactions = nodeEdges.reduce(
+                (total, edge) =>
+                  total + edge.transactions,
+                0,
+              );
+
+              const nodeSuspicious = nodeEdges.reduce(
+                (total, edge) =>
+                  total + edge.suspicious,
+                0,
+              );
+
+              const selected =
+                node.id === selectedAccount;
+
+              return (
+                <g
+                  key={node.id}
+                  className={[
+                    "networkSvgNode",
+                    node.central ? "central" : "",
+                    selected ? "selected" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Select account ${node.id}`}
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                  }}
+                  onClick={() => handleNodeClick(node.id)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" ||
+                      event.key === " "
+                    ) {
+                      event.preventDefault();
+                      handleNodeClick(node.id);
+                    }
+                  }}
+                >
+                  <rect
+                    x={node.x - 66}
+                    y={node.y - 23}
+                    width="132"
+                    height="46"
+                    rx="9"
+                  />
+
+                  <text
+                    x={node.x}
+                    y={node.y - 3}
+                    textAnchor="middle"
+                    className="networkNodeLabel"
+                  >
+                    {node.id}
+                  </text>
+
+                  <text
+                    x={node.x}
+                    y={node.y + 12}
+                    textAnchor="middle"
+                    className="networkNodeMeta"
+                  >
+                    {node.central
+                      ? `${nodeSuspicious} suspicious`
+                      : `${nodeTransactions} transactions`}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        </svg>
+
+        <div className="networkGraphHint">
+          <span>Click a node to inspect the account.</span>
+          <span>Drag to move · Scroll to zoom</span>
+        </div>
+      </div>
 
       <div className="networkGraphSummary">
         <span>
@@ -263,9 +586,107 @@ function Network({ data }: { data: Network | null }) {
           <small>Transactions</small>
         </span>
       </div>
+
+      <div className="networkAccountDetails">
+        <div className="networkAccountDetailsHead">
+          <div>
+            <span className="sectionLabel">
+              SELECTED ACCOUNT
+            </span>
+            <h3>{selectedAccount}</h3>
+          </div>
+
+          {accountLoading && (
+            <span className="networkAccountLoading">
+              Loading account data...
+            </span>
+          )}
+        </div>
+
+        {accountDetails && !accountLoading ? (
+          <>
+            <div className="networkAccountMetrics">
+              <span>
+                <strong>
+                  {accountTransactions.toLocaleString()}
+                </strong>
+                <small>Transactions</small>
+              </span>
+
+              <span>
+                <strong>
+                  {accountSuspicious.toLocaleString()}
+                </strong>
+                <small>Suspicious</small>
+              </span>
+
+              <span>
+                <strong>
+                  {accountCounterparties.toLocaleString()}
+                </strong>
+                <small>Counterparties</small>
+              </span>
+
+              <span>
+                <strong>
+                  {accountVolume.toLocaleString()}
+                </strong>
+                <small>Total volume</small>
+              </span>
+
+              <span>
+                <strong>
+                  {accountInDegree.toLocaleString()}
+                </strong>
+                <small>Incoming</small>
+              </span>
+
+              <span>
+                <strong>
+                  {accountOutDegree.toLocaleString()}
+                </strong>
+                <small>Outgoing</small>
+              </span>
+
+              <span>
+                <strong>
+                  {accountPagerank.toExponential(2)}
+                </strong>
+                <small>PageRank</small>
+              </span>
+
+              <span>
+                <strong>
+                  {accountTypologyRisk.toFixed(1)}
+                </strong>
+                <small>Typology risk</small>
+              </span>
+            </div>
+
+            <div className="networkAccountSignals">
+              <span>
+                <strong>Typology signal</strong>
+                <small>{accountTypologyReasons}</small>
+              </span>
+
+              <span>
+                <strong>Connected relationships</strong>
+                <small>
+                  {accountNetwork?.edges.length ?? 0} relationships loaded
+                </small>
+              </span>
+            </div>
+          </>
+        ) : !accountLoading ? (
+          <div className="networkAccountEmpty">
+            Account details are not available.
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
+
 export default function Home() {
   const [overview, setOverview] = useState<Overview>(fallbackOverview);
   const [alerts, setAlerts] = useState<Alert[]>(fallbackAlerts);

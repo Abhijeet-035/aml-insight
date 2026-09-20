@@ -2037,18 +2037,94 @@ button {
 }
 
 .networkGraph {
-    height: 330px;
+    height: auto;
+    min-height: 350px;
     margin-top: 8px;
-    padding: 4px 0 0;
+    padding: 8px 0 0;
     background: radial-gradient(circle at center,
             #f8fbff 0,
             #ffffff 64%);
 }
 
+.networkGraphViewport {
+    position: relative;
+    height: 300px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background:
+        radial-gradient(circle at center, #f8fbff 0, #ffffff 68%);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.networkGraphViewport:active {
+    cursor: grabbing;
+}
+
+.networkGraphViewport.fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    width: 100vw;
+    height: 100vh;
+    border: none;
+    border-radius: 0;
+    background: #ffffff;
+}
+
+.networkGraphControls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffffee;
+    box-shadow: 0 4px 14px #172b3d12;
+}
+
+.networkGraphControls button {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.networkGraphControls button:hover {
+    border-color: var(--line);
+    background: #f7f9fb;
+}
+
+.networkGraphControls .networkZoomValue {
+    width: 50px;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.networkGraphControlDivider {
+    width: 1px;
+    height: 20px;
+    background: var(--line);
+}
+
 .networkSvg {
     display: block;
     width: 100%;
-    height: 250px;
+    height: 100%;
     overflow: visible;
 }
 
@@ -2056,6 +2132,7 @@ button {
     stroke: #b9c9d8;
     fill: none;
     opacity: 0.9;
+    vector-effect: non-scaling-stroke;
 }
 
 .networkEdge.suspicious {
@@ -2070,11 +2147,20 @@ button {
     fill: var(--danger);
 }
 
+.networkSvgNode {
+    cursor: pointer;
+    outline: none;
+}
+
 .networkSvgNode rect {
     fill: #ffffff;
     stroke: #cbd8e5;
     stroke-width: 1;
     filter: drop-shadow(0 5px 8px #172b3d0c);
+    transition:
+        fill 0.15s ease,
+        stroke 0.15s ease,
+        stroke-width 0.15s ease;
 }
 
 .networkSvgNode.central rect {
@@ -2083,20 +2169,53 @@ button {
     stroke-width: 2;
 }
 
+.networkSvgNode.selected rect {
+    fill: #f3f7fb;
+    stroke: #55728d;
+    stroke-width: 2;
+}
+
+.networkSvgNode.central.selected rect {
+    fill: #fff1f3;
+    stroke: var(--danger);
+    stroke-width: 3;
+}
+
+.networkSvgNode:focus-visible rect {
+    stroke: #55728d;
+    stroke-width: 3;
+}
+
 .networkNodeLabel {
     fill: var(--ink);
     font-size: 10px;
     font-weight: 700;
+    pointer-events: none;
 }
 
 .networkNodeMeta {
     fill: var(--muted);
     font-size: 8px;
+    pointer-events: none;
 }
 
 .networkSvgNode.central .networkNodeMeta {
     fill: var(--danger);
     font-weight: 700;
+}
+
+.networkGraphHint {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 8px;
+    z-index: 4;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    pointer-events: none;
+    color: var(--muted);
+    font-size: 8px;
 }
 
 .networkGraphSummary {
@@ -2105,7 +2224,7 @@ button {
     gap: 8px;
     border-top: 1px solid var(--line);
     padding-top: 10px;
-    margin-top: 2px;
+    margin-top: 10px;
 }
 
 .networkGraphSummary span {
@@ -2123,131 +2242,95 @@ button {
     font-size: 9px;
 }
 
-.networkGraphEmpty {
-    display: grid;
-    place-items: center;
+.networkAccountDetails {
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #ffffff;
 }
 
-.networkEmptyState {
-    display: grid;
-    gap: 4px;
-    text-align: center;
-    text-align: center;
-    color: var(--muted);
-    font-size: 11px;
+.networkAccountDetailsHead {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
 }
 
-.networkEmptyState strong {
-    color: var(--ink);
-}
-
-@media (max-width: 700px) {
-    .networkGraph {
-        height: 330px;
-    }
-
-    .networkSvg {
-        height: 245px;
-    }
-
-    .networkGraphSummary {
-        gap: 6px;
-    }
-
-    .networkGraphSummary strong {
-        font-size: 10px;
-    }
-
-    .networkGraphSummary small {
-        font-size: 8px;
-    }
-}
-
-.networkGraph {
-    height: 350px;
-    margin-top: 8px;
-    padding: 4px 0 0;
-    background: radial-gradient(circle at center,
-            #f8fbff 0,
-            #ffffff 64%);
-}
-
-.networkSvg {
-    display: block;
-    width: 100%;
-    height: 280px;
-    overflow: visible;
-}
-
-.networkEdge {
-    stroke: #b9c9d8;
-    fill: none;
-    opacity: 0.9;
-}
-
-.networkEdge.suspicious {
-    stroke: var(--danger);
-}
-
-.networkArrow {
-    fill: #8da2b5;
-}
-
-.networkSuspiciousArrow {
-    fill: var(--danger);
-}
-
-.networkSvgNode rect {
-    fill: #ffffff;
-    stroke: #cbd8e5;
-    stroke-width: 1;
-    filter: drop-shadow(0 5px 8px #172b3d0c);
-}
-
-.networkSvgNode.central rect {
-    fill: #fff7f8;
-    stroke: var(--danger);
-    stroke-width: 2;
-}
-
-.networkNodeLabel {
-    fill: var(--ink);
-    font-size: 10px;
-    font-weight: 700;
-}
-
-.networkNodeMeta {
-    fill: var(--muted);
-    font-size: 8px;
-}
-
-.networkSvgNode.central .networkNodeMeta {
-    fill: var(--danger);
-    font-weight: 700;
-}
-
-.networkGraphSummary {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    border-top: 1px solid var(--line);
-    padding-top: 10px;
-    margin-top: 2px;
-}
-
-.networkGraphSummary span {
+.networkAccountDetailsHead>div {
     display: grid;
     gap: 3px;
 }
 
-.networkGraphSummary strong {
+.networkAccountDetails h3 {
+    margin: 0;
     color: var(--ink);
-    font-size: 11px;
+    font-size: 13px;
 }
 
-.networkGraphSummary small {
+.networkAccountLoading {
     color: var(--muted);
     font-size: 9px;
+}
+
+.networkAccountMetrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+}
+
+.networkAccountMetrics span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #fbfcfd;
+}
+
+.networkAccountMetrics strong {
+    color: var(--ink);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.networkAccountMetrics small {
+    color: var(--muted);
+    font-size: 8px;
+}
+
+.networkAccountSignals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.networkAccountSignals span {
+    display: grid;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 7px;
+    background: #f7f9fb;
+}
+
+.networkAccountSignals strong {
+    color: var(--ink);
+    font-size: 9px;
+}
+
+.networkAccountSignals small {
+    color: var(--muted);
+    font-size: 8px;
+    line-height: 1.4;
+}
+
+.networkAccountEmpty {
+    color: var(--muted);
+    font-size: 10px;
 }
 
 .networkGraphEmpty {
@@ -2269,11 +2352,27 @@ button {
 
 @media (max-width: 700px) {
     .networkGraph {
-        height: 330px;
+        min-height: 0;
+        padding-top: 4px;
     }
 
-    .networkSvg {
-        height: 255px;
+    .networkGraphViewport {
+        height: 240px;
+    }
+
+    .networkGraphControls {
+        top: 7px;
+        right: 7px;
+    }
+
+    .networkGraphControls button {
+        width: 32px;
+        height: 32px;
+    }
+
+    .networkGraphHint {
+        display: grid;
+        gap: 3px;
     }
 
     .networkGraphSummary {
@@ -2286,5 +2385,22 @@ button {
 
     .networkGraphSummary small {
         font-size: 8px;
+    }
+
+    .networkAccountDetails {
+        padding: 10px;
+    }
+
+    .networkAccountMetrics {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .networkAccountSignals {
+        grid-template-columns: 1fr;
+    }
+
+    .networkAccountDetailsHead {
+        display: grid;
+        gap: 6px;
     }
 }
