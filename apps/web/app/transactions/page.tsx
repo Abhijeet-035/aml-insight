@@ -56,7 +56,7 @@ export default function TransactionsPage() {
       process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
     const params = new URLSearchParams({
-      limit: "100",
+      limit: "500",
     });
 
     if (suspiciousOnly) {
