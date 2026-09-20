@@ -11,6 +11,10 @@ __pycache__/
 .DS_Store
 data/raw/*
 data/processed/*
+!data/processed/transactions.csv
+!data/processed/edges.csv
+!data/processed/account_graph_features.csv
+!data/processed/historical_features.db
 models/*.joblib
 models/*.pt
 models/*.pkl
