@@ -83,6 +83,8 @@ export default function InvestigationsPage() {
   >([]);
   const [casesLoading, setCasesLoading] = useState(true);
   const [selectedCaseId, setSelectedCaseId] = useState("");
+  const [caseSearch, setCaseSearch] = useState("");
+  const [caseStatusFilter, setCaseStatusFilter] = useState("All");
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [investigation, setInvestigation] =
     useState<Investigation | null>(null);
@@ -129,6 +131,21 @@ export default function InvestigationsPage() {
     setTimeline(timelineData);
     setEvidence(evidenceData);
   }, []);
+
+  const filteredInvestigations = investigations.filter((item) => {
+    const query = caseSearch.trim().toLowerCase();
+
+    const matchesSearch =
+      !query ||
+      item.id.toLowerCase().includes(query) ||
+      item.account_id.toLowerCase().includes(query);
+
+    const matchesStatus =
+      caseStatusFilter === "All" ||
+      item.status === caseStatusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const loadInvestigations = useCallback(async () => {
     setCasesLoading(true);
@@ -515,13 +532,40 @@ export default function InvestigationsPage() {
             </span>
           </div>
 
+          {!casesLoading && investigations.length > 0 && (
+            <div className="investigationCaseFilters">
+              <input
+                value={caseSearch}
+                onChange={(event) => setCaseSearch(event.target.value)}
+                placeholder="Search case ID or account"
+                aria-label="Search investigation cases"
+              />
+
+              <select
+                value={caseStatusFilter}
+                onChange={(event) =>
+                  setCaseStatusFilter(event.target.value)
+                }
+                aria-label="Filter investigation cases by status"
+              >
+                <option value="All">All statuses</option>
+                {statusOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {casesLoading ? (
             <div className="networkAccountEmpty">
               Loading investigation cases...
             </div>
           ) : investigations.length ? (
-            <div className="investigationCaseList">
-              {investigations.map((item) => (
+            filteredInvestigations.length ? (
+              <div className="investigationCaseList">
+                {filteredInvestigations.map((item) => (
                 <button
                   className={
                     "investigationCaseListItem" +
@@ -542,8 +586,13 @@ export default function InvestigationsPage() {
                     {new Date(item.updated_at).toLocaleString()}
                   </span>
                 </button>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="networkAccountEmpty">
+                No cases match the current search or status filter.
+              </div>
+            )
           ) : (
             <div className="networkAccountEmpty">
               No investigation cases have been created yet.
