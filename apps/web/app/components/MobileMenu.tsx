@@ -50,6 +50,12 @@ export default function MobileMenu() {
         aria-label="Open navigation menu"
         aria-expanded={open}
         onClick={() => setOpen(true)}
+        style={{
+          position: "fixed",
+          top: 10,
+          right: 10,
+          zIndex: 10000,
+        }}
       >
         <span />
         <span />
