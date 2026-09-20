@@ -60,11 +60,30 @@ def investigation_connection():
             account_id TEXT NOT NULL,
             status TEXT NOT NULL,
             notes TEXT NOT NULL DEFAULT '',
+            resolution TEXT,
+            resolution_notes TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
         """
     )
+    investigation_columns = {
+        row["name"]
+        for row in connection.execute(
+            "PRAGMA table_info(investigations)"
+        ).fetchall()
+    }
+
+    if "resolution" not in investigation_columns:
+        connection.execute(
+            "ALTER TABLE investigations ADD COLUMN resolution TEXT"
+        )
+
+    if "resolution_notes" not in investigation_columns:
+        connection.execute(
+            "ALTER TABLE investigations ADD COLUMN resolution_notes TEXT NOT NULL DEFAULT ''"
+        )
+
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS investigation_events (
@@ -99,6 +118,8 @@ def investigation_record(row: sqlite3.Row) -> dict:
         "account_id": row["account_id"],
         "status": row["status"],
         "notes": row["notes"],
+        "resolution": row["resolution"],
+        "resolution_notes": row["resolution_notes"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
@@ -243,6 +264,8 @@ class InvestigationCreate(BaseModel):
 class InvestigationUpdate(BaseModel):
     status: str | None = None
     notes: str | None = None
+    resolution: str | None = None
+    resolution_notes: str | None = None
 
 
 class InvestigationEvidenceCreate(BaseModel):
@@ -345,16 +368,20 @@ def create_investigation(request: InvestigationCreate):
             account_id,
             status,
             notes,
+            resolution,
+            resolution_notes,
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             investigation_id,
             account_id,
             "Open",
             request.notes.strip(),
+            None,
+            "",
             now,
             now,
         ),
@@ -604,11 +631,26 @@ def update_investigation(
         "Escalated",
         "Closed",
     }
+    allowed_resolutions = {
+        "Confirmed Suspicious",
+        "False Positive",
+        "Insufficient Evidence",
+        "Other",
+    }
 
     if request.status is not None and request.status not in allowed_statuses:
         raise HTTPException(
             status_code=400,
             detail="Invalid investigation status",
+        )
+
+    if (
+        request.resolution is not None
+        and request.resolution not in allowed_resolutions
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid investigation resolution",
         )
 
     connection = investigation_connection()
@@ -637,9 +679,39 @@ def update_investigation(
         else existing["notes"]
     )
 
+    resolution = (
+        request.resolution
+        if request.resolution is not None
+        else existing["resolution"]
+    )
+
+    resolution_notes = (
+        request.resolution_notes
+        if request.resolution_notes is not None
+        else existing["resolution_notes"]
+    )
+
+    resolution = resolution.strip() if resolution else None
+    resolution_notes = resolution_notes.strip()
+
+    if status == "Closed":
+        if resolution is None:
+            connection.close()
+            raise HTTPException(
+                status_code=400,
+                detail="A resolution is required before closing a case.",
+            )
+
+        if not resolution_notes:
+            connection.close()
+            raise HTTPException(
+                status_code=400,
+                detail="Resolution notes are required before closing a case.",
+            )
+
     updated_at = datetime.now(timezone.utc).isoformat()
 
-    if (status != existing["status"]):
+    if status != existing["status"]:
         add_investigation_event(
             connection,
             investigation_id,
@@ -649,7 +721,7 @@ def update_investigation(
             updated_at,
         )
 
-    if (notes != existing["notes"]):
+    if notes != existing["notes"]:
         add_investigation_event(
             connection,
             investigation_id,
@@ -659,15 +731,59 @@ def update_investigation(
             updated_at,
         )
 
+    if resolution != existing["resolution"]:
+        add_investigation_event(
+            connection,
+            investigation_id,
+            "resolution",
+            "Case resolution updated",
+            (
+                f"Resolution: {resolution}."
+                if resolution
+                else "Case resolution cleared."
+            ),
+            updated_at,
+        )
+
+    if (
+        resolution_notes != existing["resolution_notes"]
+        and resolution_notes
+    ):
+        add_investigation_event(
+            connection,
+            investigation_id,
+            "resolution_note_update",
+            "Resolution notes updated",
+            "Case resolution notes were updated.",
+            updated_at,
+        )
+
+    if status == "Closed" and existing["status"] != "Closed":
+        add_investigation_event(
+            connection,
+            investigation_id,
+            "case_closed",
+            "Case closed",
+            f"Case closed with resolution: {resolution}.",
+            updated_at,
+        )
+
     connection.execute(
         """
         UPDATE investigations
-        SET status = ?, notes = ?, updated_at = ?
+        SET
+            status = ?,
+            notes = ?,
+            resolution = ?,
+            resolution_notes = ?,
+            updated_at = ?
         WHERE id = ?
         """,
         (
             status,
             notes,
+            resolution,
+            resolution_notes,
             updated_at,
             investigation_id,
         ),
