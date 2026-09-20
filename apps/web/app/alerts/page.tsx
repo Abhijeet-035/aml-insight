@@ -403,7 +403,9 @@ export default function AlertsPage() {
                       href={
                         "/investigations?account=" +
                         encodeURIComponent(
-                          alertReview.transaction.account,
+                          selectedAlert.account ||
+                            alertReview.transaction.account ||
+                            "",
                         )
                       }
                     >
