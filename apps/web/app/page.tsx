@@ -707,7 +707,9 @@ export default function Home() {
   const metrics = [["Transactions", formatNumber(overview.transactions), overview.data_status === "processed_dataset" ? "Processed dataset" : "Local demo dataset"], ["Alerts", formatNumber(overview.alerts), "Observed laundering labels"], ["Risk volume", formatMoney(overview.risk_volume), "Observed suspicious volume"], ["Network nodes", formatNumber(overview.network_nodes), "Accounts in transaction graph"]];
 
   return <main>
-    <aside><div className="brand"><div className="brandMark">A</div><div><strong>AML Insight</strong><small>Transaction Intelligence</small></div></div><nav><a className="active">Overview</a><a href="/transactions">Transactions</a><a href="/predict">Predict</a><a>Network</a><a>Alerts</a><a>Investigations</a><a>Models</a></nav><div className="sidebarBottom"><span>IBM AML Benchmark</span><span>{overview.data_status === "processed_dataset" ? "HI-Small loaded" : "Demo mode"}</span></div></aside>
+    <aside><div className="brand"><div className="brandMark">A</div><div><strong>AML Insight</strong><small>Transaction Intelligence</small></div></div><nav>
+          <a className="active" href="/">Overview</a>
+        </nav><div className="sidebarBottom"><span>IBM AML Benchmark</span><span>{overview.data_status === "processed_dataset" ? "HI-Small loaded" : "Demo mode"}</span></div></aside>
     <section className="content">
       <header><div><p className="eyebrow">ANTI-MONEY LAUNDERING</p><h1>Investigation command center</h1><p className="subtitle">Detect suspicious transaction behavior across connected financial networks.</p></div><div className="headerActions"><button>Export</button><button className="primary">New investigation</button></div></header>
       <div className="metrics">{metrics.map(([label, value, detail]) => <div className="metric" key={label}><span>{label}</span><strong>{value}</strong><small>{detail}</small></div>)}</div>
