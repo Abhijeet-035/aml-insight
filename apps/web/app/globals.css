@@ -475,34 +475,31 @@ button {
 }
 
 @media (max-width: 700px) {
-    aside {
-        display: none;
+    .networkGraph {
+        height: 285px;
+        margin-top: 8px;
+        padding: 0;
     }
 
-    .content {
-        margin-left: 0;
+    .networkSvg {
         width: 100%;
+        height: 210px;
+        transform: scale(1.12);
+        transform-origin: center center;
     }
 
-    header {
-        display: block;
+    .networkGraphSummary {
+        margin-top: 0;
+        padding-top: 8px;
+        gap: 6px;
     }
 
-    .headerActions {
-        margin-top: 15px;
+    .networkGraphSummary strong {
+        font-size: 10px;
     }
 
-    .metrics {
-        grid-template-columns: 1fr;
-    }
-
-    .row {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .row>span:nth-child(n + 3),
-    .row>a {
-        display: none;
+    .networkGraphSummary small {
+        font-size: 8px;
     }
 }
 
@@ -2036,5 +2033,258 @@ button {
 @media (max-width: 380px) {
     .transactionTableRow {
         grid-template-columns: 1fr;
+    }
+}
+
+.networkGraph {
+    height: 330px;
+    margin-top: 8px;
+    padding: 4px 0 0;
+    background: radial-gradient(circle at center,
+            #f8fbff 0,
+            #ffffff 64%);
+}
+
+.networkSvg {
+    display: block;
+    width: 100%;
+    height: 250px;
+    overflow: visible;
+}
+
+.networkEdge {
+    stroke: #b9c9d8;
+    fill: none;
+    opacity: 0.9;
+}
+
+.networkEdge.suspicious {
+    stroke: var(--danger);
+}
+
+.networkArrow {
+    fill: #8da2b5;
+}
+
+.networkSuspiciousArrow {
+    fill: var(--danger);
+}
+
+.networkSvgNode rect {
+    fill: #ffffff;
+    stroke: #cbd8e5;
+    stroke-width: 1;
+    filter: drop-shadow(0 5px 8px #172b3d0c);
+}
+
+.networkSvgNode.central rect {
+    fill: #fff7f8;
+    stroke: var(--danger);
+    stroke-width: 2;
+}
+
+.networkNodeLabel {
+    fill: var(--ink);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.networkNodeMeta {
+    fill: var(--muted);
+    font-size: 8px;
+}
+
+.networkSvgNode.central .networkNodeMeta {
+    fill: var(--danger);
+    font-weight: 700;
+}
+
+.networkGraphSummary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+    margin-top: 2px;
+}
+
+.networkGraphSummary span {
+    display: grid;
+    gap: 3px;
+}
+
+.networkGraphSummary strong {
+    color: var(--ink);
+    font-size: 11px;
+}
+
+.networkGraphSummary small {
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.networkGraphEmpty {
+    display: grid;
+    place-items: center;
+}
+
+.networkEmptyState {
+    display: grid;
+    gap: 4px;
+    text-align: center;
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.networkEmptyState strong {
+    color: var(--ink);
+}
+
+@media (max-width: 700px) {
+    .networkGraph {
+        height: 330px;
+    }
+
+    .networkSvg {
+        height: 245px;
+    }
+
+    .networkGraphSummary {
+        gap: 6px;
+    }
+
+    .networkGraphSummary strong {
+        font-size: 10px;
+    }
+
+    .networkGraphSummary small {
+        font-size: 8px;
+    }
+}
+
+.networkGraph {
+    height: 350px;
+    margin-top: 8px;
+    padding: 4px 0 0;
+    background: radial-gradient(circle at center,
+            #f8fbff 0,
+            #ffffff 64%);
+}
+
+.networkSvg {
+    display: block;
+    width: 100%;
+    height: 280px;
+    overflow: visible;
+}
+
+.networkEdge {
+    stroke: #b9c9d8;
+    fill: none;
+    opacity: 0.9;
+}
+
+.networkEdge.suspicious {
+    stroke: var(--danger);
+}
+
+.networkArrow {
+    fill: #8da2b5;
+}
+
+.networkSuspiciousArrow {
+    fill: var(--danger);
+}
+
+.networkSvgNode rect {
+    fill: #ffffff;
+    stroke: #cbd8e5;
+    stroke-width: 1;
+    filter: drop-shadow(0 5px 8px #172b3d0c);
+}
+
+.networkSvgNode.central rect {
+    fill: #fff7f8;
+    stroke: var(--danger);
+    stroke-width: 2;
+}
+
+.networkNodeLabel {
+    fill: var(--ink);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.networkNodeMeta {
+    fill: var(--muted);
+    font-size: 8px;
+}
+
+.networkSvgNode.central .networkNodeMeta {
+    fill: var(--danger);
+    font-weight: 700;
+}
+
+.networkGraphSummary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+    margin-top: 2px;
+}
+
+.networkGraphSummary span {
+    display: grid;
+    gap: 3px;
+}
+
+.networkGraphSummary strong {
+    color: var(--ink);
+    font-size: 11px;
+}
+
+.networkGraphSummary small {
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.networkGraphEmpty {
+    display: grid;
+    place-items: center;
+}
+
+.networkEmptyState {
+    display: grid;
+    gap: 4px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.networkEmptyState strong {
+    color: var(--ink);
+}
+
+@media (max-width: 700px) {
+    .networkGraph {
+        height: 330px;
+    }
+
+    .networkSvg {
+        height: 255px;
+    }
+
+    .networkGraphSummary {
+        gap: 6px;
+    }
+
+    .networkGraphSummary strong {
+        font-size: 10px;
+    }
+
+    .networkGraphSummary small {
+        font-size: 8px;
     }
 }
