@@ -110,6 +110,15 @@ export default function AlertsPage() {
                     {alert.currency} {formatMoney(alert.amount)}
                   </span>
                   <span>{alert.counterparty}</span>
+                  <a
+                    className="analyzeLink"
+                    href={
+                      "/investigations?account=" +
+                      encodeURIComponent(alert.account)
+                    }
+                  >
+                    Investigate
+                  </a>
                 </div>
               ))}
             </div>
