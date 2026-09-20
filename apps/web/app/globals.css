@@ -767,3 +767,347 @@ button {
         gap: 10px;
     }
 }
+
+.networkSearchPanel {
+    margin-bottom: 16px;
+}
+
+.networkSearchForm {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    margin-top: 18px;
+}
+
+.networkSearchField {
+    display: grid;
+    gap: 7px;
+    flex: 1;
+}
+
+.networkSearchField label {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.networkSearchField input {
+    width: 100%;
+    min-height: 38px;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 12px;
+    outline: none;
+}
+
+.networkSearchField input:focus {
+    border-color: var(--accent);
+}
+
+.networkSearchButton {
+    min-height: 38px;
+    white-space: nowrap;
+}
+
+.networkError {
+    margin: 12px 0 0;
+    color: var(--danger);
+    font-size: 11px;
+}
+
+.networkMetrics {
+    margin-bottom: 16px;
+}
+
+.networkInvestigationGrid {
+    display: grid;
+    grid-template-columns: 1.7fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.networkGraphPanel {
+    min-width: 0;
+}
+
+.investigationGraph {
+    position: relative;
+    height: 460px;
+    margin-top: 12px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: radial-gradient(circle at center,
+            #f8fbff 0,
+            #ffffff 62%);
+}
+
+.networkSvg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.networkConnection {
+    stroke: #b9c9d8;
+    stroke-width: 0.35;
+    vector-effect: non-scaling-stroke;
+}
+
+.suspiciousConnection {
+    stroke: var(--danger);
+    stroke-width: 0.7;
+}
+
+.investigationNode {
+    position: absolute;
+    z-index: 2;
+    transform: translate(-50%, -50%);
+    min-width: 110px;
+    padding: 10px 12px;
+    border: 1px solid #cbd8e5;
+    border-radius: 9px;
+    background: #ffffff;
+    box-shadow: 0 5px 15px #172b3d0c;
+    text-align: center;
+}
+
+.investigationNode strong {
+    display: block;
+    color: var(--ink);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.investigationNode span {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.centralNode {
+    left: 50%;
+    top: 50%;
+    border: 2px solid var(--danger);
+}
+
+.centralNode span {
+    color: var(--danger);
+    font-weight: 800;
+}
+
+.connectedNode {
+    margin-left: 0;
+}
+
+.emptyGraph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 7px;
+    color: var(--muted);
+    text-align: center;
+}
+
+.emptyGraph strong {
+    color: var(--ink);
+    font-size: 12px;
+}
+
+.emptyGraph span {
+    font-size: 10px;
+}
+
+.accountProfilePanel {
+    display: flex;
+    flex-direction: column;
+}
+
+.accountMetric {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.accountMetric:first-of-type {
+    margin-top: 18px;
+}
+
+.accountMetric:last-child {
+    border-bottom: none;
+}
+
+.accountMetric span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.accountMetric strong {
+    color: var(--ink);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+}
+
+.relationshipPanel {
+    margin-bottom: 16px;
+}
+
+.relationshipList {
+    margin-top: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.relationshipRow {
+    display: grid;
+    grid-template-columns: 55px 1fr 100px 130px 130px;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+    padding: 12px;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    background: #ffffff;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+}
+
+.relationshipRow:last-child {
+    border-bottom: none;
+}
+
+.relationshipRow:hover {
+    background: #f8fbff;
+}
+
+.relationshipDirection {
+    color: var(--accent);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.relationshipAccount {
+    font-size: 11px;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.relationshipRow>span:not(.relationshipDirection):not(.relationshipAccount) {
+    color: var(--muted);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+.safeText {
+    color: #2c7544 !important;
+}
+
+.relationshipDetail {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 15px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8fbff;
+}
+
+.relationshipDetail>strong {
+    color: var(--ink);
+    font-size: 12px;
+}
+
+.relationshipDetailGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.relationshipDetailGrid span {
+    display: grid;
+    gap: 5px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.relationshipDetailGrid strong {
+    color: var(--ink);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1000px) {
+    .networkInvestigationGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .relationshipRow {
+        grid-template-columns: 55px 1fr 90px 110px 110px;
+    }
+}
+
+@media (max-width: 700px) {
+    .networkSearchForm {
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .networkSearchButton {
+        width: 100%;
+    }
+
+    .investigationGraph {
+        height: 400px;
+    }
+
+    .investigationNode {
+        min-width: 90px;
+        padding: 8px 9px;
+    }
+
+    .relationshipList {
+        overflow-x: auto;
+    }
+
+    .relationshipRow {
+        min-width: 560px;
+    }
+
+    .relationshipDetailGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.investigationNode {
+    font: inherit;
+    cursor: pointer;
+}
+
+.connectedNode:hover {
+    border-color: var(--accent);
+    box-shadow: 0 7px 18px #172b3d14;
+}
+
+.connectedNode:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.networkConnection {
+    pointer-events: none;
+}

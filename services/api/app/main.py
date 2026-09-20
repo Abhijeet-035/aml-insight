@@ -324,6 +324,64 @@ def network(limit: int = 20):
     node_ids = sorted(set(edges["account"]).union(edges["counterparty_account"]))
     return {"nodes": [{"id": str(node), "label": str(node)} for node in node_ids], "edges": [{"source": str(row.account), "target": str(row.counterparty_account), "transactions": int(row.transaction_count), "amount": float(row.total_amount), "suspicious": int(row.suspicious_count)} for row in edges.itertuples(index=False)]}
 
+@app.get("/api/v1/account/{account_id}/network")
+def account_network(account_id: str, limit: int = 50):
+    if not EDGES.exists():
+        return {"account": account_id, "nodes": [], "edges": []}
+
+    matching_chunks = []
+
+    for chunk in pd.read_csv(EDGES, chunksize=100_000):
+        matches = chunk[
+            (chunk["account"].astype(str) == account_id)
+            | (chunk["counterparty_account"].astype(str) == account_id)
+        ]
+
+        if not matches.empty:
+            matching_chunks.append(matches)
+
+    if not matching_chunks:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Account {account_id} is not present in the network",
+        )
+
+    edges = pd.concat(matching_chunks, ignore_index=True)
+
+    edges = (
+        edges.sort_values(
+            ["suspicious_count", "total_amount"],
+            ascending=False,
+        )
+        .head(max(1, min(limit, 100)))
+    )
+
+    node_ids = sorted(
+        set(edges["account"]).union(
+            edges["counterparty_account"]
+        )
+    )
+
+    return {
+        "account": account_id,
+        "nodes": [
+            {
+                "id": str(node),
+                "label": str(node),
+            }
+            for node in node_ids
+        ],
+        "edges": [
+            {
+                "source": str(row.account),
+                "target": str(row.counterparty_account),
+                "transactions": int(row.transaction_count),
+                "amount": float(row.total_amount),
+                "suspicious": int(row.suspicious_count),
+            }
+            for row in edges.itertuples(index=False)
+        ],
+    }
 
 @app.get("/api/v1/account/{account_id}")
 def account(account_id: str):
