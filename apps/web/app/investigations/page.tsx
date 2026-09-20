@@ -140,6 +140,16 @@ export default function InvestigationsPage() {
     setEvidence(evidenceData);
   }, []);
 
+  const caseMetrics = statusOptions.reduce(
+    (counts, option) => {
+      counts[option] = investigations.filter(
+        (item) => item.status === option,
+      ).length;
+      return counts;
+    },
+    {} as Record<string, number>,
+  );
+
   const filteredInvestigations = investigations.filter((item) => {
     const query = caseSearch.trim().toLowerCase();
 
@@ -549,6 +559,29 @@ export default function InvestigationsPage() {
             </p>
           </div>
         </header>
+
+        <section className="investigationCaseMetrics">
+          <div className="investigationCaseMetric">
+            <span>Total cases</span>
+            <strong>{investigations.length}</strong>
+          </div>
+          <div className="investigationCaseMetric">
+            <span>Open</span>
+            <strong>{caseMetrics.Open ?? 0}</strong>
+          </div>
+          <div className="investigationCaseMetric">
+            <span>In review</span>
+            <strong>{caseMetrics["In Review"] ?? 0}</strong>
+          </div>
+          <div className="investigationCaseMetric">
+            <span>Escalated</span>
+            <strong>{caseMetrics.Escalated ?? 0}</strong>
+          </div>
+          <div className="investigationCaseMetric">
+            <span>Closed</span>
+            <strong>{caseMetrics.Closed ?? 0}</strong>
+          </div>
+        </section>
 
         <section className="panel investigationCaseListPanel">
           <div className="panelHead">
