@@ -280,6 +280,33 @@ function PredictContent() {
                   : "Not Suspicious"}
               </div>
             </section>
+            <section className="panel predictActionsPanel">
+              <div className="panelHead">
+                <div>
+                  <p className="sectionLabel">NEXT ACTION</p>
+                  <h2>Continue Analysis</h2>
+                </div>
+              </div>
+
+              <div className="predictActions">
+                <a
+                  className="primary"
+                  href={
+                    "/investigations?account=" +
+                    encodeURIComponent(result.transaction.account)
+                  }
+                >
+                  Investigate account
+                </a>
+                <a
+                  className="secondaryButton"
+                  href="/transactions"
+                >
+                  Back to transactions
+                </a>
+              </div>
+            </section>
+
             <section className="panel explanationPanel">
               <div className="panelHead">
                 <div>
