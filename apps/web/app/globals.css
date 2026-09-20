@@ -2518,3 +2518,24 @@ button {
         gap: 6px;
     }
 }
+
+
+@media (max-width: 1000px) {
+    .mobileMenuButton {
+        display: grid !important;
+        position: fixed !important;
+        top: 10px !important;
+        right: 10px !important;
+        z-index: 10000 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    .mobileMenuOverlay {
+        z-index: 10001 !important;
+    }
+
+    .mobileMenuDrawer {
+        z-index: 10002 !important;
+    }
+}
