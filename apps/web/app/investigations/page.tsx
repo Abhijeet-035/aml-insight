@@ -33,6 +33,8 @@ type Investigation = {
   account_id: string;
   status: string;
   notes: string;
+  resolution: string | null;
+  resolution_notes: string;
   created_at: string;
   updated_at: string;
 };
@@ -91,6 +93,8 @@ export default function InvestigationsPage() {
     useState<Investigation | null>(null);
   const [status, setStatus] = useState("Open");
   const [notes, setNotes] = useState("");
+  const [resolution, setResolution] = useState("");
+  const [resolutionNotes, setResolutionNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -283,6 +287,16 @@ export default function InvestigationsPage() {
       return;
     }
 
+    if (
+      status === "Closed" &&
+      (!resolution || !resolutionNotes.trim())
+    ) {
+      setError(
+        "A resolution and resolution notes are required before closing a case.",
+      );
+      return;
+    }
+
     setSaving(true);
     setError("");
     setSaveMessage("");
@@ -314,6 +328,8 @@ export default function InvestigationsPage() {
       setSelectedCaseId(data.id);
       setStatus(data.status);
       setNotes(data.notes);
+      setResolution(data.resolution ?? "");
+      setResolutionNotes(data.resolution_notes ?? "");
       await loadCaseActivity(data.id);
       await loadInvestigations();
       setSaveMessage(
@@ -422,6 +438,8 @@ export default function InvestigationsPage() {
     setInvestigation(null);
     setStatus("Open");
     setNotes("");
+    setResolution("");
+    setResolutionNotes("");
     setTimeline([]);
     setEvidence([]);
     setSaveMessage("");
@@ -451,6 +469,8 @@ export default function InvestigationsPage() {
           body: JSON.stringify({
             status,
             notes,
+            resolution: resolution || null,
+            resolution_notes: resolutionNotes,
           }),
         },
       );
@@ -466,7 +486,10 @@ export default function InvestigationsPage() {
       setInvestigation(data);
       setStatus(data.status);
       setNotes(data.notes);
+      setResolution(data.resolution ?? "");
+      setResolutionNotes(data.resolution_notes ?? "");
       await loadCaseActivity(data.id);
+      await loadInvestigations();
       setSaveMessage(
         data.id + " updated successfully.",
       );
@@ -614,6 +637,9 @@ export default function InvestigationsPage() {
                   <span>
                     <strong>{item.id}</strong>
                     <small>{item.account_id}</small>
+                    {item.resolution && (
+                      <small>{item.resolution}</small>
+                    )}
                   </span>
                   <span className="investigationCaseListStatus">
                     {item.status}
@@ -726,6 +752,55 @@ export default function InvestigationsPage() {
                   }
                   placeholder="Record findings, rationale, and follow-up actions."
                   rows={5}
+                />
+              </div>
+
+              <div className="investigationResolution">
+                <div className="investigationResolutionHeader">
+                  <div>
+                    <label htmlFor="investigation-resolution">
+                      Resolution
+                    </label>
+                    <p>
+                      Required when the case is moved to Closed.
+                    </p>
+                  </div>
+                  {status === "Closed" && (
+                    <span className="riskBadge">REQUIRED</span>
+                  )}
+                </div>
+
+                <select
+                  id="investigation-resolution"
+                  value={resolution}
+                  onChange={(event) =>
+                    setResolution(event.target.value)
+                  }
+                >
+                  <option value="">Select resolution</option>
+                  <option value="Confirmed Suspicious">
+                    Confirmed Suspicious
+                  </option>
+                  <option value="False Positive">
+                    False Positive
+                  </option>
+                  <option value="Insufficient Evidence">
+                    Insufficient Evidence
+                  </option>
+                  <option value="Other">Other</option>
+                </select>
+
+                <label htmlFor="investigation-resolution-notes">
+                  Resolution notes
+                </label>
+                <textarea
+                  id="investigation-resolution-notes"
+                  value={resolutionNotes}
+                  onChange={(event) =>
+                    setResolutionNotes(event.target.value)
+                  }
+                  placeholder="Document why the case was resolved this way."
+                  rows={4}
                 />
               </div>
 
