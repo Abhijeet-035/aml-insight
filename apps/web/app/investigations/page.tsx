@@ -2,6 +2,7 @@
 
 import {
   type FormEvent,
+  useCallback,
   useEffect,
   useState,
 } from "react";
@@ -59,7 +60,7 @@ export default function InvestigationsPage() {
   const [error, setError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
 
-  const loadAccount = async (value: string) => {
+  const loadAccount = useCallback(async (value: string) => {
     const trimmedAccountId = value.trim();
 
     if (!trimmedAccountId) {
@@ -111,7 +112,7 @@ export default function InvestigationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const investigate = async (event?: FormEvent) => {
     event?.preventDefault();
@@ -128,7 +129,7 @@ export default function InvestigationsPage() {
       setAccountId(queryAccount);
       void loadAccount(queryAccount);
     }
-  }, []);
+  }, [loadAccount]);
 
   const createInvestigation = async () => {
     if (!account) {
