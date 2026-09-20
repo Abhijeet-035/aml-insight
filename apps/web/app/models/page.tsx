@@ -53,6 +53,27 @@ export default function ModelsPage() {
     ? Object.entries(model.metrics)
     : [];
 
+  const selectedThreshold =
+    typeof model?.metrics?.selected_threshold === "number"
+      ? Number(model.metrics.selected_threshold)
+      : null;
+
+  const performanceMetrics = metrics.filter(
+    ([key]) =>
+      ![
+        "selected_threshold",
+        "threshold",
+        "feature_count",
+        "training_rows",
+        "test_rows",
+      ].includes(key),
+  );
+
+  const formatLabel = (key: string) =>
+    key
+      .replaceAll("_", " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
   return (
     <main>
       <aside>
@@ -104,21 +125,70 @@ export default function ModelsPage() {
                 <span>Model state</span>
                 <strong>{model.status.replaceAll("_", " ")}</strong>
               </div>
-              <div className="metric">
-                <span>Metric count</span>
-                <strong>{metrics.length}</strong>
-              </div>
+
               <div className="metric">
                 <span>Model source</span>
                 <strong>XGBoost</strong>
               </div>
+
               <div className="metric">
-                <span>Evaluation</span>
+                <span>Evaluation metrics</span>
+                <strong>{performanceMetrics.length}</strong>
+              </div>
+
+              <div className="metric">
+                <span>Decision threshold</span>
                 <strong>
-                  {model.metrics ? "Available" : "Pending"}
+                  {selectedThreshold !== null
+                    ? (selectedThreshold * 100).toFixed(2) + "%"
+                    : "—"}
                 </strong>
               </div>
             </div>
+
+            <section className="panel modelGovernancePanel">
+              <div className="panelHead">
+                <div>
+                  <span className="sectionLabel">MODEL GOVERNANCE</span>
+                  <h2>Current decision configuration</h2>
+                </div>
+                <span className="riskBadge">
+                  {model.status.toUpperCase()}
+                </span>
+              </div>
+
+              <div className="modelGovernanceGrid">
+                <div>
+                  <span>Model family</span>
+                  <strong>XGBoost</strong>
+                </div>
+
+                <div>
+                  <span>Artifact state</span>
+                  <strong>
+                    {model.status === "trained"
+                      ? "Loaded"
+                      : "Unavailable"}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Decision threshold</span>
+                  <strong>
+                    {selectedThreshold !== null
+                      ? (selectedThreshold * 100).toFixed(2) + "%"
+                      : "Not available"}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Evaluation status</span>
+                  <strong>
+                    {model.metrics ? "Available" : "Pending"}
+                  </strong>
+                </div>
+              </div>
+            </section>
 
             <section className="panel">
               <div className="panelHead">
@@ -131,11 +201,11 @@ export default function ModelsPage() {
                 </span>
               </div>
 
-              {metrics.length ? (
-                <div className="detailGrid">
+              {performanceMetrics.length ? (
+                <div className="detailGrid modelMetricGrid">
                   {metrics.map(([key, value]) => (
                     <div key={key}>
-                      <span>{key.replaceAll("_", " ")}</span>
+                      <span>{formatLabel(key)}</span>
                       <strong>{formatMetric(value)}</strong>
                     </div>
                   ))}
@@ -145,6 +215,29 @@ export default function ModelsPage() {
                   No evaluation metrics are available.
                 </div>
               )}
+            </section>
+
+            <section className="panel modelWorkflowPanel">
+              <div className="panelHead">
+                <div>
+                  <span className="sectionLabel">ANALYST WORKFLOW</span>
+                  <h2>Use the model</h2>
+                </div>
+              </div>
+
+              <p>
+                Select a transaction to review its model score and
+                explainable risk signals.
+              </p>
+
+              <div className="modelWorkflowActions">
+                <a className="primary" href="/transactions">
+                  Open transactions
+                </a>
+                <a className="secondaryButton" href="/predict">
+                  Run prediction
+                </a>
+              </div>
             </section>
           </>
         ) : (
