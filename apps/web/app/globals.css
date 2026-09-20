@@ -2670,3 +2670,139 @@ button {
         flex-direction: column;
     }
 }
+
+
+.investigationEvidenceGrid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.investigationEvidenceForm {
+    display: grid;
+    gap: 9px;
+    margin-top: 16px;
+}
+
+.investigationEvidenceForm input,
+.investigationEvidenceForm select,
+.investigationEvidenceForm textarea {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+}
+
+.investigationEvidenceForm input,
+.investigationEvidenceForm select {
+    height: 40px;
+    padding: 0 11px;
+}
+
+.investigationEvidenceForm textarea {
+    resize: vertical;
+    min-height: 96px;
+    padding: 10px 11px;
+    line-height: 1.5;
+}
+
+.investigationEvidenceList {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.investigationEvidenceItem {
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 12px;
+    background: #fbfcfe;
+}
+
+.investigationEvidenceMeta,
+.investigationTimelineMeta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.investigationEvidenceMeta span {
+    color: var(--accent);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.investigationEvidenceMeta time,
+.investigationTimelineMeta time {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.investigationEvidenceItem strong {
+    display: block;
+    margin-top: 7px;
+    font-size: 12px;
+}
+
+.investigationEvidenceItem p,
+.investigationTimelineItem p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.investigationTimeline {
+    display: grid;
+    gap: 0;
+    margin-top: 16px;
+}
+
+.investigationTimelineItem {
+    display: grid;
+    grid-template-columns: 16px 1fr;
+    gap: 10px;
+    position: relative;
+    padding-bottom: 18px;
+}
+
+.investigationTimelineItem:last-child {
+    padding-bottom: 0;
+}
+
+.investigationTimelineDot {
+    width: 9px;
+    height: 9px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--soft);
+}
+
+.investigationTimelineItem:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 13px;
+    bottom: 0;
+    width: 1px;
+    background: var(--line);
+}
+
+.investigationTimelineMeta strong {
+    font-size: 12px;
+}
+
+@media (max-width: 900px) {
+    .investigationEvidenceGrid {
+        grid-template-columns: 1fr;
+    }
+}
