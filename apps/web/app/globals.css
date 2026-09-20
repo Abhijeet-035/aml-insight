@@ -400,7 +400,7 @@ button {
 
 .row {
     display: grid;
-    grid-template-columns: 1.1fr 1.3fr 0.7fr 1fr 1.1fr 1.2fr 70px;
+    grid-template-columns: 1.1fr 1.3fr 0.7fr 1fr 1.1fr 1.2fr 55px 70px;
     align-items: center;
     border-top: 1px solid var(--line);
     padding: 14px 4px;
@@ -3196,4 +3196,193 @@ button {
 .investigationResolutionOption:hover,
 .investigationResolutionOption.selected {
     background: var(--soft);
+}
+
+
+.alertReviewButton {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--accent);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    text-align: left;
+    cursor: pointer;
+    justify-self: start;
+}
+
+.alertReviewButton:hover {
+    text-decoration: underline;
+}
+
+.alertReviewPanel {
+    margin-top: 16px;
+}
+
+.alertReviewClose {
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px 11px;
+    background: #ffffff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.alertReviewClose:hover {
+    background: #f8fbff;
+}
+
+.alertReviewSummary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.alertReviewSummary > div {
+    display: grid;
+    gap: 5px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+.alertReviewSummary span {
+    color: var(--muted);
+    font-size: 9px;
+    text-transform: uppercase;
+}
+
+.alertReviewSummary strong {
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+.alertReviewGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.alertReviewDetails {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+.alertReviewDetails dl {
+    display: grid;
+    gap: 10px;
+    margin: 14px 0 0;
+}
+
+.alertReviewDetails dl > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 9px;
+    border-top: 1px solid var(--line);
+}
+
+.alertReviewDetails dt {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.alertReviewDetails dd {
+    margin: 0;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.alertReviewRisk {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 11px;
+    border-radius: 7px;
+    background: #fff0f2;
+    color: var(--danger);
+    font-size: 10px;
+}
+
+.alertReviewSignals {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.alertReviewSignals > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-top: 1px solid var(--line);
+    font-size: 10px;
+}
+
+.alertReviewSignals span {
+    overflow-wrap: anywhere;
+}
+
+.alertReviewActions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+}
+
+.alertReviewActions .primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.alertPattern {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+@media (max-width: 700px) {
+    .alertReviewSummary,
+    .alertReviewGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .alertReviewActions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .alertReviewActions .primary {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .alertsPanel .row > .alertReviewButton {
+        min-width: 0;
+    }
+
+    .alertsPanel .row > .alertReviewButton::before {
+        content: "Review";
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
 }
