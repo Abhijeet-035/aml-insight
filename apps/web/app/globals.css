@@ -3679,3 +3679,59 @@ button {
         box-sizing: border-box;
     }
 }
+
+
+.predictActionsPanel {
+    grid-column: 1 / -1;
+}
+
+.predictActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.predictActions .primary,
+.secondaryButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.predictActions .primary {
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #ffffff;
+}
+
+.secondaryButton {
+    border: 1px solid var(--line);
+    background: #ffffff;
+    color: var(--ink);
+}
+
+.predictActions .primary:hover {
+    filter: brightness(0.94);
+}
+
+.secondaryButton:hover {
+    background: var(--soft);
+}
+
+@media (max-width: 700px) {
+    .predictActions {
+        flex-direction: column;
+    }
+
+    .predictActions .primary,
+    .secondaryButton {
+        width: 100%;
+    }
+}
