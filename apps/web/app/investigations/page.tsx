@@ -88,6 +88,9 @@ export default function InvestigationsPage() {
   const [caseSearch, setCaseSearch] = useState("");
   const [caseStatusFilter, setCaseStatusFilter] = useState("All");
   const [caseStatusMenuOpen, setCaseStatusMenuOpen] = useState(false);
+  const [workspaceStatusMenuOpen, setWorkspaceStatusMenuOpen] =
+    useState(false);
+  const [resolutionMenuOpen, setResolutionMenuOpen] = useState(false);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [investigation, setInvestigation] =
     useState<Investigation | null>(null);
@@ -440,6 +443,8 @@ export default function InvestigationsPage() {
     setNotes("");
     setResolution("");
     setResolutionNotes("");
+    setWorkspaceStatusMenuOpen(false);
+    setResolutionMenuOpen(false);
     setTimeline([]);
     setEvidence([]);
     setSaveMessage("");
@@ -713,19 +718,47 @@ export default function InvestigationsPage() {
                   <label htmlFor="investigation-status">
                     Case status
                   </label>
-                  <select
-                    id="investigation-status"
-                    value={status}
-                    onChange={(event) =>
-                      setStatus(event.target.value)
-                    }
-                  >
-                    {statusOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="investigationWorkspaceStatusFilter">
+                    <button
+                      className="investigationWorkspaceStatusButton"
+                      type="button"
+                      aria-haspopup="listbox"
+                      aria-expanded={workspaceStatusMenuOpen}
+                      onClick={() =>
+                        setWorkspaceStatusMenuOpen((open) => !open)
+                      }
+                    >
+                      <span>{status}</span>
+                      <span aria-hidden="true">▾</span>
+                    </button>
+
+                    {workspaceStatusMenuOpen && (
+                      <div
+                        className="investigationWorkspaceStatusMenu"
+                        role="listbox"
+                        aria-label="Case status"
+                      >
+                        {statusOptions.map((option) => (
+                          <button
+                            className={
+                              "investigationWorkspaceStatusOption" +
+                              (status === option ? " selected" : "")
+                            }
+                            key={option}
+                            type="button"
+                            role="option"
+                            aria-selected={status === option}
+                            onClick={() => {
+                              setStatus(option);
+                              setWorkspaceStatusMenuOpen(false);
+                            }}
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -770,25 +803,55 @@ export default function InvestigationsPage() {
                   )}
                 </div>
 
-                <select
-                  id="investigation-resolution"
-                  value={resolution}
-                  onChange={(event) =>
-                    setResolution(event.target.value)
-                  }
-                >
-                  <option value="">Select resolution</option>
-                  <option value="Confirmed Suspicious">
-                    Confirmed Suspicious
-                  </option>
-                  <option value="False Positive">
-                    False Positive
-                  </option>
-                  <option value="Insufficient Evidence">
-                    Insufficient Evidence
-                  </option>
-                  <option value="Other">Other</option>
-                </select>
+                <div className="investigationResolutionFilter">
+                  <button
+                    className="investigationResolutionButton"
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={resolutionMenuOpen}
+                    onClick={() =>
+                      setResolutionMenuOpen((open) => !open)
+                    }
+                  >
+                    <span>
+                      {resolution || "Select resolution"}
+                    </span>
+                    <span aria-hidden="true">▾</span>
+                  </button>
+
+                  {resolutionMenuOpen && (
+                    <div
+                      className="investigationResolutionMenu"
+                      role="listbox"
+                      aria-label="Investigation resolution"
+                    >
+                      {[
+                        "",
+                        "Confirmed Suspicious",
+                        "False Positive",
+                        "Insufficient Evidence",
+                        "Other",
+                      ].map((option) => (
+                        <button
+                          className={
+                            "investigationResolutionOption" +
+                            (resolution === option ? " selected" : "")
+                          }
+                          key={option || "empty"}
+                          type="button"
+                          role="option"
+                          aria-selected={resolution === option}
+                          onClick={() => {
+                            setResolution(option);
+                            setResolutionMenuOpen(false);
+                          }}
+                        >
+                          {option || "Select resolution"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <label htmlFor="investigation-resolution-notes">
                   Resolution notes
