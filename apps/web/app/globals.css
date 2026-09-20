@@ -843,6 +843,81 @@ button {
     background: radial-gradient(circle at center,
             #f8fbff 0,
             #ffffff 62%);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.investigationGraphCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
+    will-change: transform;
+}
+
+.investigationGraph:active {
+    cursor: grabbing;
+}
+
+.investigationGraph.fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background: #ffffff;
+}
+
+.investigationGraphControls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffffee;
+    box-shadow: 0 4px 14px #172b3d12;
+}
+
+.investigationGraphControls button {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.investigationGraphControls button:hover {
+    border-color: var(--line);
+    background: #f7f9fb;
+}
+
+.investigationGraphControls .investigationZoomValue {
+    width: 50px;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.investigationGraphControlDivider {
+    width: 1px;
+    height: 20px;
+    background: var(--line);
 }
 
 .networkSvg {
@@ -1098,6 +1173,24 @@ button {
 .connectedNode:hover {
     border-color: var(--accent);
     box-shadow: 0 7px 18px #172b3d14;
+}
+
+.connectedNode:active {
+    cursor: pointer;
+}
+
+.investigationGraphHint {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 8px;
+    z-index: 4;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    pointer-events: none;
+    color: var(--muted);
+    font-size: 8px;
 }
 
 .connectedNode:focus-visible {
@@ -1382,6 +1475,21 @@ button {
         height: 360px;
     }
 
+    .investigationGraphControls {
+        top: 7px;
+        right: 7px;
+    }
+
+    .investigationGraphControls button {
+        width: 32px;
+        height: 32px;
+    }
+
+    .investigationGraphHint {
+        display: grid;
+        gap: 3px;
+    }
+
     .investigationNode {
         min-width: 88px;
         max-width: 118px;
@@ -1433,6 +1541,11 @@ button {
 
     .investigationGraph {
         height: 320px;
+    }
+
+    .investigationGraphControls {
+        top: 6px;
+        right: 6px;
     }
 
     .investigationNode {

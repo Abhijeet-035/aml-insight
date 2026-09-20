@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { type FormEvent, type PointerEvent, type WheelEvent, useEffect, useRef, useState } from "react";
 
 type AccountSummary = {
   account: string;
@@ -61,16 +61,20 @@ function NetworkGraph({
   edges: NetworkEdge[];
   onAccountClick: (accountId: string) => void;
 }) {
-  const connectedNodes = nodes.filter((node) => node.id !== account);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  if (!connectedNodes.length) {
-    return (
-      <div className="investigationGraph emptyGraph">
-        <strong>No connected accounts found</strong>
-        <span>This account has no network relationships in the graph.</span>
-      </div>
-    );
-  }
+  const graphRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef({
+    active: false,
+    startX: 0,
+    startY: 0,
+    panX: 0,
+    panY: 0,
+  });
+
+  const connectedNodes = nodes.filter((node) => node.id !== account);
 
   const positions = [
     { x: 50, y: 50 },
@@ -97,152 +101,366 @@ function NetworkGraph({
     return visibleNodeIds.has(target);
   });
 
+  const clampPan = (value: number, axis: "x" | "y", nextZoom = zoom) => {
+    const rect = graphRef.current?.getBoundingClientRect();
+
+    if (!rect) {
+      return value;
+    }
+
+    const size = axis === "x" ? rect.width : rect.height;
+    const maxPan = Math.max(0, ((nextZoom - 1) * size) / 2 + 50);
+
+    return Math.max(-maxPan, Math.min(maxPan, value));
+  };
+
+  const updateZoom = (nextZoom: number) => {
+    const value = Math.max(0.6, Math.min(2.5, nextZoom));
+
+    setZoom(Number(value.toFixed(2)));
+    setPan((current) => ({
+      x: clampPan(current.x, "x", value),
+      y: clampPan(current.y, "y", value),
+    }));
+  };
+
+  const zoomIn = () => {
+    updateZoom(zoom + 0.1);
+  };
+
+  const zoomOut = () => {
+    updateZoom(zoom - 0.1);
+  };
+
+  const resetGraph = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const handleGraphWheel = (event: WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    if (event.deltaY < 0) {
+      updateZoom(zoom + 0.1);
+    } else {
+      updateZoom(zoom - 0.1);
+    }
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    dragRef.current = {
+      active: true,
+      startX: event.clientX,
+      startY: event.clientY,
+      panX: pan.x,
+      panY: pan.y,
+    };
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active || !graphRef.current) {
+      return;
+    }
+
+    const deltaX = event.clientX - dragRef.current.startX;
+    const deltaY = event.clientY - dragRef.current.startY;
+
+    setPan({
+      x: clampPan(
+        dragRef.current.panX + deltaX,
+        "x",
+      ),
+      y: clampPan(
+        dragRef.current.panY + deltaY,
+        "y",
+      ),
+    });
+  };
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active) {
+      return;
+    }
+
+    dragRef.current.active = false;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const handleFullscreenChange = () => {
+    setIsFullscreen(
+      document.fullscreenElement === graphRef.current,
+    );
+  };
+
+  const toggleFullscreen = async () => {
+    if (!graphRef.current) {
+      return;
+    }
+
+    if (document.fullscreenElement === graphRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    if (document.fullscreenEnabled) {
+      await graphRef.current.requestFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener(
+      "fullscreenchange",
+      handleFullscreenChange,
+    );
+
+    return () => {
+      document.removeEventListener(
+        "fullscreenchange",
+        handleFullscreenChange,
+      );
+    };
+  }, []);
+
+  if (!connectedNodes.length) {
+    return (
+      <div className="investigationGraph emptyGraph">
+        <strong>No connected accounts found</strong>
+        <span>This account has no network relationships in the graph.</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="investigationGraph">
-      <svg
-        className="networkSvg"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
+    <div
+      ref={graphRef}
+      className={[
+        "investigationGraph",
+        isFullscreen ? "fullscreen" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      onWheel={handleGraphWheel}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      <div
+        className="investigationGraphControls"
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+        onWheel={(event) => {
+          event.stopPropagation();
+        }}
       >
-        <defs>
-          <marker
-            id="networkArrow"
-            viewBox="0 0 10 10"
-            refX="9"
-            refY="5"
-            markerWidth="4"
-            markerHeight="4"
-            orient="auto-start-reverse"
-          >
-            <path
-              d="M 0 0 L 10 5 L 0 10 z"
-              fill="#b9c9d8"
-            />
-          </marker>
+        <button
+          type="button"
+          onClick={zoomOut}
+          aria-label="Zoom out"
+        >
+          −
+        </button>
 
-          <marker
-            id="suspiciousArrow"
-            viewBox="0 0 10 10"
-            refX="9"
-            refY="5"
-            markerWidth="4"
-            markerHeight="4"
-            orient="auto-start-reverse"
-          >
-            <path
-              d="M 0 0 L 10 5 L 0 10 z"
-              fill="var(--danger)"
-            />
-          </marker>
-        </defs>
+        <button
+          type="button"
+          className="investigationZoomValue"
+          onClick={resetGraph}
+          aria-label="Reset graph zoom and position"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
 
-        {visibleEdges.map((edge, index) => {
-          if (edge.source === account && edge.target === account) {
-            return (
+        <button
+          type="button"
+          onClick={zoomIn}
+          aria-label="Zoom in"
+        >
+          +
+        </button>
+
+        <span className="investigationGraphControlDivider" />
+
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          aria-label={
+            isFullscreen
+              ? "Exit fullscreen"
+              : "Open graph in fullscreen"
+          }
+        >
+          {isFullscreen ? "×" : "⛶"}
+        </button>
+      </div>
+
+      <div
+        className="investigationGraphCanvas"
+        style={{
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+        }}
+      >
+        <svg
+          className="networkSvg"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <marker
+              id="networkArrow"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="4"
+              markerHeight="4"
+              orient="auto-start-reverse"
+            >
               <path
+                d="M 0 0 L 10 5 L 0 10 z"
+                fill="#b9c9d8"
+              />
+            </marker>
+
+            <marker
+              id="suspiciousArrow"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="4"
+              markerHeight="4"
+              orient="auto-start-reverse"
+            >
+              <path
+                d="M 0 0 L 10 5 L 0 10 z"
+                fill="var(--danger)"
+              />
+            </marker>
+          </defs>
+
+          {visibleEdges.map((edge, index) => {
+            if (edge.source === account && edge.target === account) {
+              return (
+                <path
+                  key={`${edge.source}-${edge.target}-${index}`}
+                  d="M 56 44 C 72 30, 72 70, 56 56"
+                  className={
+                    edge.suspicious > 0
+                      ? "networkConnection suspiciousConnection"
+                      : "networkConnection"
+                  }
+                  fill="none"
+                  markerEnd={
+                    edge.suspicious > 0
+                      ? "url(#suspiciousArrow)"
+                      : "url(#networkArrow)"
+                  }
+                />
+              );
+            }
+
+            const target =
+              edge.source === account ? edge.target : edge.source;
+
+            const nodeIndex = visibleNodes.findIndex(
+              (node) => node.id === target,
+            );
+
+            if (nodeIndex < 0) {
+              return null;
+            }
+
+            const position = positions[nodeIndex + 1];
+            const isOutgoing = edge.source === account;
+            const isSuspicious = edge.suspicious > 0;
+
+            return (
+              <line
                 key={`${edge.source}-${edge.target}-${index}`}
-                d="M 56 44 C 72 30, 72 70, 56 56"
+                x1={isOutgoing ? "50" : position.x}
+                y1={isOutgoing ? "50" : position.y}
+                x2={isOutgoing ? position.x : "50"}
+                y2={isOutgoing ? position.y : "50"}
                 className={
-                  edge.suspicious > 0
+                  isSuspicious
                     ? "networkConnection suspiciousConnection"
                     : "networkConnection"
                 }
-                fill="none"
                 markerEnd={
-                  edge.suspicious > 0
-                    ? "url(#suspiciousArrow)"
-                    : "url(#networkArrow)"
+                  isOutgoing
+                    ? isSuspicious
+                      ? "url(#suspiciousArrow)"
+                      : "url(#networkArrow)"
+                    : undefined
+                }
+                markerStart={
+                  !isOutgoing
+                    ? isSuspicious
+                      ? "url(#suspiciousArrow)"
+                      : "url(#networkArrow)"
+                    : undefined
                 }
               />
             );
-          }
+          })}
+        </svg>
 
-          const target =
-            edge.source === account ? edge.target : edge.source;
+        <div className="investigationNode centralNode">
+          <strong>{account}</strong>
+          <span>Investigated account</span>
+        </div>
 
-          const nodeIndex = visibleNodes.findIndex(
-            (node) => node.id === target
-          );
-
-          if (nodeIndex < 0) {
-            return null;
-          }
-
-          const position = positions[nodeIndex + 1];
-          const isOutgoing = edge.source === account;
-          const isSuspicious = edge.suspicious > 0;
+        {visibleNodes.map((node, index) => {
+          const position = positions[index + 1];
 
           return (
-            <line
-              key={`${edge.source}-${edge.target}-${index}`}
-              x1={isOutgoing ? "50" : position.x}
-              y1={isOutgoing ? "50" : position.y}
-              x2={isOutgoing ? position.x : "50"}
-              y2={isOutgoing ? position.y : "50"}
-              className={
-                isSuspicious
-                  ? "networkConnection suspiciousConnection"
-                  : "networkConnection"
-              }
-              markerEnd={
-                isOutgoing
-                  ? isSuspicious
-                    ? "url(#suspiciousArrow)"
-                    : "url(#networkArrow)"
-                  : undefined
-              }
-              markerStart={
-                !isOutgoing
-                  ? isSuspicious
-                    ? "url(#suspiciousArrow)"
-                    : "url(#networkArrow)"
-                  : undefined
-              }
-            />
+            <button
+              className="investigationNode connectedNode"
+              key={node.id}
+              type="button"
+              style={{
+                left: `${position.x}%`,
+                top: `${position.y}%`,
+              }}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+              }}
+              onClick={() => onAccountClick(node.id)}
+            >
+              <strong>{node.label}</strong>
+              <span>
+                {edges
+                  .filter(
+                    (edge) =>
+                      edge.source === node.id ||
+                      edge.target === node.id,
+                  )
+                  .reduce(
+                    (total, edge) => total + edge.transactions,
+                    0,
+                  )}{" "}
+                txns
+              </span>
+            </button>
           );
         })}
-      </svg>
-
-      <div className="investigationNode centralNode">
-        <strong>{account}</strong>
-        <span>Investigated account</span>
       </div>
 
-      {visibleNodes.map((node, index) => {
-        const position = positions[index + 1];
-
-        return (
-          <button
-            className="investigationNode connectedNode"
-            key={node.id}
-            type="button"
-            style={{
-              left: `${position.x}%`,
-              top: `${position.y}%`,
-            }}
-            onClick={() => onAccountClick(node.id)}
-          >
-            <strong>{node.label}</strong>
-            <span>
-              {edges
-                .filter(
-                  (edge) =>
-                    edge.source === node.id ||
-                    edge.target === node.id
-                )
-                .reduce(
-                  (total, edge) => total + edge.transactions,
-                  0
-                )}{" "}
-              txns
-            </span>
-          </button>
-        );
-      })}
+      <div className="investigationGraphHint">
+        <span>Click a node to investigate that account.</span>
+        <span>Drag to move · Scroll to zoom</span>
+      </div>
     </div>
   );
 }
-
 export default function NetworkPage() {
   const [account, setAccount] = useState(DEFAULT_ACCOUNT);
   const [searchAccount, setSearchAccount] =
