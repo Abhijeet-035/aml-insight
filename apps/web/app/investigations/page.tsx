@@ -37,6 +37,8 @@ type Investigation = {
   updated_at: string;
 };
 
+type InvestigationListItem = Investigation;
+
 type InvestigationTimelineEvent = {
   id: number;
   investigation_id: string;
@@ -76,6 +78,11 @@ const API_URL =
 export default function InvestigationsPage() {
   const [accountId, setAccountId] = useState("");
   const [account, setAccount] = useState<Account | null>(null);
+  const [investigations, setInvestigations] = useState<
+    InvestigationListItem[]
+  >([]);
+  const [casesLoading, setCasesLoading] = useState(true);
+  const [selectedCaseId, setSelectedCaseId] = useState("");
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [investigation, setInvestigation] =
     useState<Investigation | null>(null);
@@ -121,6 +128,27 @@ export default function InvestigationsPage() {
 
     setTimeline(timelineData);
     setEvidence(evidenceData);
+  }, []);
+
+  const loadInvestigations = useCallback(async () => {
+    setCasesLoading(true);
+
+    try {
+      const response = await fetch(
+        API_URL + "/api/v1/investigations",
+      );
+
+      if (!response.ok) {
+        throw new Error("Unable to load investigation cases.");
+      }
+
+      const data = await response.json();
+      setInvestigations(data);
+    } catch {
+      setInvestigations([]);
+    } finally {
+      setCasesLoading(false);
+    }
   }, []);
 
   const loadAccount = useCallback(async (value: string) => {
@@ -210,6 +238,10 @@ export default function InvestigationsPage() {
   };
 
   useEffect(() => {
+    void loadInvestigations();
+  }, [loadInvestigations]);
+
+  useEffect(() => {
     const params = new URLSearchParams(
       window.location.search,
     );
@@ -261,9 +293,11 @@ export default function InvestigationsPage() {
       }
 
       setInvestigation(data);
+      setSelectedCaseId(data.id);
       setStatus(data.status);
       setNotes(data.notes);
       await loadCaseActivity(data.id);
+      await loadInvestigations();
       setSaveMessage(
         data.id + " created successfully.",
       );
@@ -336,7 +370,37 @@ export default function InvestigationsPage() {
     }
   };
 
+  const openInvestigation = async (caseId: string) => {
+    setSelectedCaseId(caseId);
+    setError("");
+    setSaveMessage("");
+
+    try {
+      const response = await fetch(
+        API_URL +
+          "/api/v1/investigations/" +
+          encodeURIComponent(caseId),
+      );
+
+      if (!response.ok) {
+        throw new Error("Unable to load the selected investigation.");
+      }
+
+      const data = await response.json();
+
+      setAccountId(data.account_id);
+      await loadAccount(data.account_id);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to load the selected investigation.",
+      );
+    }
+  };
+
   const startNewInvestigation = () => {
+    setSelectedCaseId("");
     setInvestigation(null);
     setStatus("Open");
     setNotes("");
@@ -439,6 +503,53 @@ export default function InvestigationsPage() {
             </p>
           </div>
         </header>
+
+        <section className="panel investigationCaseListPanel">
+          <div className="panelHead">
+            <div>
+              <span className="sectionLabel">CASE MANAGEMENT</span>
+              <h2>Investigation cases</h2>
+            </div>
+            <span className="riskBadge">
+              {investigations.length} CASES
+            </span>
+          </div>
+
+          {casesLoading ? (
+            <div className="networkAccountEmpty">
+              Loading investigation cases...
+            </div>
+          ) : investigations.length ? (
+            <div className="investigationCaseList">
+              {investigations.map((item) => (
+                <button
+                  className={
+                    "investigationCaseListItem" +
+                    (selectedCaseId === item.id ? " selected" : "")
+                  }
+                  key={item.id}
+                  type="button"
+                  onClick={() => void openInvestigation(item.id)}
+                >
+                  <span>
+                    <strong>{item.id}</strong>
+                    <small>{item.account_id}</small>
+                  </span>
+                  <span className="investigationCaseListStatus">
+                    {item.status}
+                  </span>
+                  <span className="investigationCaseListDate">
+                    {new Date(item.updated_at).toLocaleString()}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="networkAccountEmpty">
+              No investigation cases have been created yet.
+            </div>
+          )}
+        </section>
 
         <section className="panel">
           <div className="panelHead">
