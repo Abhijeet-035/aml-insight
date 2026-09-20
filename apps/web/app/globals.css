@@ -3074,3 +3074,58 @@ button {
 .investigationCaseStatusOption.selected {
     background: var(--soft);
 }
+
+
+.investigationResolution {
+    display: grid;
+    gap: 9px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+}
+
+.investigationResolutionHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.investigationResolutionHeader > div {
+    display: grid;
+    gap: 4px;
+}
+
+.investigationResolutionHeader p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.investigationResolution select,
+.investigationResolution textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #ffffff;
+    color: var(--ink);
+    font: inherit;
+}
+
+.investigationResolution select {
+    padding: 10px 11px;
+    font-size: 11px;
+}
+
+.investigationResolution textarea {
+    padding: 10px 11px;
+    resize: vertical;
+    font-size: 11px;
+}
+
+.investigationResolution select:focus,
+.investigationResolution textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
