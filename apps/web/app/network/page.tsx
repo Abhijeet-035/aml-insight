@@ -553,12 +553,10 @@ export default function NetworkPage() {
           <a href="/">Overview</a>
           <a href="/transactions">Transactions</a>
           <a href="/predict">Predict</a>
-          <a className="active" href="/network">
-            Network
-          </a>
-          <a>Alerts</a>
-          <a>Investigations</a>
-          <a>Models</a>
+          <a className="active" href="/network">Network</a>
+          <a href="/alerts">Alerts</a>
+          <a href="/investigations">Investigations</a>
+          <a href="/models">Models</a>
         </nav>
 
         <div className="sidebarBottom">
