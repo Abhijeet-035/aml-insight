@@ -3559,3 +3559,86 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+
+.transactionSearchField {
+    position: relative;
+    min-width: 0;
+}
+
+.transactionSearchField input {
+    padding-left: 38px;
+}
+
+.transactionSearchIcon {
+    position: absolute;
+    top: 50%;
+    left: 13px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+@media (max-width: 700px) {
+    .transactionSearchField {
+        width: 100%;
+    }
+}
+
+.alertsPanel .alertReviewButton,
+.alertsPanel .analyzeLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.alertsPanel .alertReviewButton {
+    border: 1px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.alertsPanel .alertReviewButton:hover {
+    background: var(--soft);
+}
+
+.alertsPanel .analyzeLink {
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #ffffff;
+}
+
+.alertsPanel .analyzeLink:hover {
+    filter: brightness(0.94);
+}
+
+@media (max-width: 700px) {
+    .alertsPanel .alertReviewButton,
+    .alertsPanel .analyzeLink {
+        width: 100%;
+        min-height: 36px;
+        padding: 0 12px;
+    }
+
+    .alertsPanel .alertReviewButton::before,
+    .alertsPanel .analyzeLink::before {
+        content: none;
+    }
+
+    .alertsPanel .row > .alertReviewButton,
+    .alertsPanel .row > .analyzeLink {
+        align-self: stretch;
+        justify-self: stretch;
+    }
+}
