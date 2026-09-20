@@ -2981,6 +2981,36 @@ button {
 }
 
 
+.investigationCaseHeaderActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.investigationCaseExportButton {
+    min-height: 32px;
+    padding: 0 11px;
+    font-size: 10px;
+}
+
+.investigationCaseExportButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+    .investigationCaseHeaderActions {
+        align-items: stretch;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .investigationCaseExportButton {
+        width: 100%;
+    }
+}
+
 .investigationCaseFilters {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 180px;
