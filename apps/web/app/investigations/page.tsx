@@ -696,34 +696,47 @@ export default function InvestigationsPage() {
 
               {relationships.length ? (
                 <div className="relationshipList">
-                  {relationships.map((relationship, index) => (
-                    <div
-                      className="relationshipRow"
-                      key={`${relationship.source}-${relationship.target}-${index}`}
-                    >
-                      <span className="relationshipDirection">
-                        {relationship.source === account.account
-                          ? "OUT"
-                          : "IN"}
-                      </span>
-                      <span className="relationshipAccount">
-                        {relationship.source === account.account
-                          ? relationship.target
-                          : relationship.source}
-                      </span>
-                      <span>{relationship.transactions} txns</span>
-                      <span>{relationship.amount.toLocaleString()}</span>
-                      <span
-                        className={
-                          relationship.suspicious
-                            ? "riskText"
-                            : "safeText"
+                  {relationships.map((relationship, index) => {
+                    const connectedAccount =
+                      relationship.source === account.account
+                        ? relationship.target
+                        : relationship.source;
+
+                    return (
+                      <a
+                        className="relationshipRow"
+                        href={
+                          "/investigations?account=" +
+                          encodeURIComponent(connectedAccount)
+                        }
+                        key={`RELATIONSHIP-${index}-${relationship.source}-${relationship.target}`}
+                        aria-label={
+                          "Investigate connected account " +
+                          connectedAccount
                         }
                       >
-                        {relationship.suspicious} suspicious
-                      </span>
-                    </div>
-                  ))}
+                        <span className="relationshipDirection">
+                          {relationship.source === account.account
+                            ? "OUT"
+                            : "IN"}
+                        </span>
+                        <span className="relationshipAccount">
+                          {connectedAccount}
+                        </span>
+                        <span>{relationship.transactions} txns</span>
+                        <span>{relationship.amount.toLocaleString()}</span>
+                        <span
+                          className={
+                            relationship.suspicious
+                              ? "riskText"
+                              : "safeText"
+                          }
+                        >
+                          {relationship.suspicious} suspicious
+                        </span>
+                      </a>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="networkAccountEmpty">
