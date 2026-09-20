@@ -2825,3 +2825,78 @@ button {
 .investigationNewCaseButton:hover {
     background: #f8fbff;
 }
+
+
+@media (max-width: 700px) {
+    .alertsPanel .table {
+        display: grid;
+        gap: 10px;
+    }
+
+    .alertsPanel .row {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 14px;
+        margin-bottom: 0;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #ffffff;
+    }
+
+    .alertsPanel .row > span,
+    .alertsPanel .row > a {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .alertsPanel .row > span::before,
+    .alertsPanel .row > a::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .alertsPanel .row > .caseId::before {
+        content: "Alert";
+    }
+
+    .alertsPanel .row > span:nth-child(2)::before {
+        content: "Account";
+    }
+
+    .alertsPanel .row > span:nth-child(3)::before {
+        content: "Risk";
+    }
+
+    .alertsPanel .row > span:nth-child(4)::before {
+        content: "Pattern";
+    }
+
+    .alertsPanel .row > span:nth-child(5)::before {
+        content: "Amount";
+    }
+
+    .alertsPanel .row > span:nth-child(6)::before {
+        content: "Counterparty";
+    }
+
+    .alertsPanel .row > .analyzeLink::before {
+        content: "";
+    }
+
+    .alertsPanel .analyzeLink {
+        align-self: end;
+        justify-self: start;
+    }
+}
+
+@media (max-width: 380px) {
+    .alertsPanel .row {
+        grid-template-columns: 1fr;
+    }
+}
