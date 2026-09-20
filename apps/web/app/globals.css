@@ -1056,6 +1056,7 @@ button {
     background: #ffffff;
     color: var(--ink);
     text-align: left;
+    text-decoration: none;
     cursor: pointer;
 }
 
