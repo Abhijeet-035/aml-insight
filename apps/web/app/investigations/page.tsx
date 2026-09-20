@@ -85,6 +85,7 @@ export default function InvestigationsPage() {
   const [selectedCaseId, setSelectedCaseId] = useState("");
   const [caseSearch, setCaseSearch] = useState("");
   const [caseStatusFilter, setCaseStatusFilter] = useState("All");
+  const [caseStatusMenuOpen, setCaseStatusMenuOpen] = useState(false);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [investigation, setInvestigation] =
     useState<Investigation | null>(null);
@@ -541,20 +542,55 @@ export default function InvestigationsPage() {
                 aria-label="Search investigation cases"
               />
 
-              <select
-                value={caseStatusFilter}
-                onChange={(event) =>
-                  setCaseStatusFilter(event.target.value)
-                }
-                aria-label="Filter investigation cases by status"
-              >
-                <option value="All">All statuses</option>
-                {statusOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <div className="investigationCaseStatusFilter">
+                <button
+                  className="investigationCaseStatusButton"
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={caseStatusMenuOpen}
+                  onClick={() =>
+                    setCaseStatusMenuOpen((open) => !open)
+                  }
+                >
+                  <span>
+                    {caseStatusFilter === "All"
+                      ? "All statuses"
+                      : caseStatusFilter}
+                  </span>
+                  <span aria-hidden="true">▾</span>
+                </button>
+
+                {caseStatusMenuOpen && (
+                  <div
+                    className="investigationCaseStatusMenu"
+                    role="listbox"
+                    aria-label="Filter investigation cases by status"
+                  >
+                    {["All", ...statusOptions].map((option) => (
+                      <button
+                        className={
+                          "investigationCaseStatusOption" +
+                          (caseStatusFilter === option
+                            ? " selected"
+                            : "")
+                        }
+                        key={option}
+                        type="button"
+                        role="option"
+                        aria-selected={caseStatusFilter === option}
+                        onClick={() => {
+                          setCaseStatusFilter(option);
+                          setCaseStatusMenuOpen(false);
+                        }}
+                      >
+                        {option === "All"
+                          ? "All statuses"
+                          : option}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
