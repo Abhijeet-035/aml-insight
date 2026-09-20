@@ -140,21 +140,6 @@ export default function TransactionsPage() {
     }
   };
 
-  const filtered = transactions;
-  const filtered = useMemo(() => {
-    const value = query.trim().toLowerCase();
-
-    if (!value) {
-      return alerts;
-    }
-
-    return alerts.filter((item) =>
-      Object.values(item).some((field) =>
-        String(field).toLowerCase().includes(value)
-      )
-    );
-  }, [alerts, query]);
-
   return (
     <main>
       <aside>
