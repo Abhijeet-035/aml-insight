@@ -947,6 +947,103 @@ def predict_transaction(transaction_id: int):
         "explanation": explanation,
     }
 
+@app.get("/api/v1/transactions")
+def transactions(
+    query: str = "",
+    suspicious_only: bool = False,
+    limit: int = 100,
+):
+    frame = transaction_frame()
+
+    if frame is None:
+        return []
+
+    result = frame.copy()
+
+    if suspicious_only:
+        result = result[result["is_laundering"] == 1]
+
+    search = query.strip().lower()
+
+    if search:
+        searchable = (
+            result["transaction_id"].astype(str)
+            + " "
+            + result["account"].astype(str)
+            + " "
+            + result["counterparty_account"].astype(str)
+            + " "
+            + result["receiving_currency"].astype(str)
+            + " "
+            + result["payment_format"].astype(str)
+        )
+        result = result[searchable.str.lower().str.contains(search, na=False)]
+
+    result = result.sort_values(
+        "transaction_id",
+        ascending=False,
+    ).head(max(1, min(limit, 500)))
+
+    typologies = typology_frame()
+
+    if typologies is not None:
+        risk_columns = [
+            column
+            for column in [
+                "transaction_id",
+                "typology_risk",
+                "typology_reasons",
+            ]
+            if column in typologies.columns
+        ]
+
+        if "transaction_id" in risk_columns:
+            result = result.merge(
+                typologies[risk_columns],
+                on="transaction_id",
+                how="left",
+            )
+        else:
+            result["typology_risk"] = None
+            result["typology_reasons"] = None
+    else:
+        result["typology_risk"] = None
+        result["typology_reasons"] = None
+
+    records = []
+
+    for row in result.itertuples(index=False):
+        risk = (
+            float(row.typology_risk)
+            if pd.notna(row.typology_risk)
+            else 90.0 if int(row.is_laundering) == 1 else 0.0
+        )
+
+        pattern = (
+            str(row.typology_reasons)
+            if pd.notna(row.typology_reasons)
+            else "Benchmark laundering transaction"
+            if int(row.is_laundering) == 1
+            else "No typology alert"
+        )
+
+        records.append(
+            {
+                "transaction_id": int(row.transaction_id),
+                "timestamp": str(row.timestamp),
+                "account": str(row.account),
+                "counterparty": str(row.counterparty_account),
+                "amount": float(row.amount_received),
+                "currency": str(row.receiving_currency),
+                "payment_format": str(row.payment_format),
+                "risk": round(risk, 2),
+                "suspicious": bool(int(row.is_laundering)),
+                "pattern": pattern,
+            }
+        )
+
+    return records
+
 @app.get("/api/v1/alerts")
 def alerts(limit: int = 20):
     frame = transaction_frame()
