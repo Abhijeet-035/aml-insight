@@ -295,12 +295,18 @@ export default function AlertsPage() {
                   <div className="alertReviewSummary">
                     <div>
                       <span>Account</span>
-                      <strong>{alertReview.transaction.account}</strong>
+                      <strong>
+                        {selectedAlert.account ||
+                          alertReview.transaction.account ||
+                          "Unavailable"}
+                      </strong>
                     </div>
                     <div>
                       <span>Counterparty</span>
                       <strong>
-                        {alertReview.transaction.counterparty_account}
+                        {selectedAlert.counterparty ||
+                          alertReview.transaction.counterparty_account ||
+                          "Unavailable"}
                       </strong>
                     </div>
                     <div>
