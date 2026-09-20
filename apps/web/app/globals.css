@@ -2807,3 +2807,21 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+
+.investigationNewCaseButton {
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.investigationNewCaseButton:hover {
+    background: #f8fbff;
+}
