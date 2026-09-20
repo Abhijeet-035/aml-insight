@@ -65,6 +65,30 @@ def investigation_connection():
         )
         """
     )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS investigation_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            investigation_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            details TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS investigation_evidence (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            investigation_id TEXT NOT NULL,
+            evidence_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            details TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+        """
+    )
     connection.commit()
     return connection
 
@@ -78,6 +102,88 @@ def investigation_record(row: sqlite3.Row) -> dict:
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
+
+
+def investigation_event_record(row: sqlite3.Row) -> dict:
+    return {
+        "id": int(row["id"]),
+        "investigation_id": row["investigation_id"],
+        "event_type": row["event_type"],
+        "title": row["title"],
+        "details": row["details"],
+        "created_at": row["created_at"],
+    }
+
+
+def investigation_evidence_record(row: sqlite3.Row) -> dict:
+    return {
+        "id": int(row["id"]),
+        "investigation_id": row["investigation_id"],
+        "evidence_type": row["evidence_type"],
+        "title": row["title"],
+        "details": row["details"],
+        "created_at": row["created_at"],
+    }
+
+
+def add_investigation_event(
+    connection: sqlite3.Connection,
+    investigation_id: str,
+    event_type: str,
+    title: str,
+    details: str,
+    created_at: str | None = None,
+) -> None:
+    timestamp = created_at or datetime.now(timezone.utc).isoformat()
+    connection.execute(
+        """
+        INSERT INTO investigation_events (
+            investigation_id,
+            event_type,
+            title,
+            details,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            investigation_id,
+            event_type,
+            title,
+            details,
+            timestamp,
+        ),
+    )
+
+
+def add_investigation_evidence(
+    connection: sqlite3.Connection,
+    investigation_id: str,
+    evidence_type: str,
+    title: str,
+    details: str,
+    created_at: str | None = None,
+) -> None:
+    timestamp = created_at or datetime.now(timezone.utc).isoformat()
+    connection.execute(
+        """
+        INSERT INTO investigation_evidence (
+            investigation_id,
+            evidence_type,
+            title,
+            details,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            investigation_id,
+            evidence_type,
+            title,
+            details,
+            timestamp,
+        ),
+    )
 
 
 def model_status() -> dict:
@@ -137,6 +243,12 @@ class InvestigationCreate(BaseModel):
 class InvestigationUpdate(BaseModel):
     status: str | None = None
     notes: str | None = None
+
+
+class InvestigationEvidenceCreate(BaseModel):
+    evidence_type: str
+    title: str
+    details: str
 
 
 class PredictionRequest(BaseModel):
@@ -250,6 +362,50 @@ def create_investigation(request: InvestigationCreate):
 
     connection.commit()
 
+    add_investigation_event(
+        connection,
+        investigation_id,
+        "case_created",
+        "Investigation created",
+        f"Investigation opened for account {account_id}.",
+        now,
+    )
+
+    add_investigation_evidence(
+        connection,
+        investigation_id,
+        "Account profile",
+        "Account activity snapshot",
+        (
+            f"Transactions: {int(related.shape[0])}. "
+            f"Suspicious transactions: {int(related["is_laundering"].sum())}. "
+            f"Total volume: {float(related["amount_received"].sum()):,.2f}."
+        ),
+        now,
+    )
+
+    account_scores = account_risk_frame()
+    if account_scores is not None:
+        match = account_scores[
+            account_scores["account"].astype(str) == account_id
+        ]
+        if not match.empty:
+            score = match.iloc[0]
+            add_investigation_evidence(
+                connection,
+                investigation_id,
+                "Risk signal",
+                "Account risk indicators",
+                (
+                    f"Typology risk: {float(score.typology_risk):.2f}. "
+                    f"Alert count: {int(score.alert_count)}. "
+                    f"Signals: {score.reasons}."
+                ),
+                now,
+            )
+
+    connection.commit()
+
     row = connection.execute(
         "SELECT * FROM investigations WHERE id = ?",
         (investigation_id,),
@@ -278,6 +434,135 @@ def get_investigation(investigation_id: str):
         )
 
     return investigation_record(row)
+
+
+@app.get("/api/v1/investigations/{investigation_id}/timeline")
+def investigation_timeline(investigation_id: str):
+    connection = investigation_connection()
+
+    exists = connection.execute(
+        "SELECT id FROM investigations WHERE id = ?",
+        (investigation_id,),
+    ).fetchone()
+
+    if exists is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Investigation was not found",
+        )
+
+    rows = connection.execute(
+        """
+        SELECT *
+        FROM investigation_events
+        WHERE investigation_id = ?
+        ORDER BY created_at DESC, id DESC
+        """,
+        (investigation_id,),
+    ).fetchall()
+
+    connection.close()
+
+    return [investigation_event_record(row) for row in rows]
+
+
+@app.get("/api/v1/investigations/{investigation_id}/evidence")
+def investigation_evidence(investigation_id: str):
+    connection = investigation_connection()
+
+    exists = connection.execute(
+        "SELECT id FROM investigations WHERE id = ?",
+        (investigation_id,),
+    ).fetchone()
+
+    if exists is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Investigation was not found",
+        )
+
+    rows = connection.execute(
+        """
+        SELECT *
+        FROM investigation_evidence
+        WHERE investigation_id = ?
+        ORDER BY created_at DESC, id DESC
+        """,
+        (investigation_id,),
+    ).fetchall()
+
+    connection.close()
+
+    return [investigation_evidence_record(row) for row in rows]
+
+
+@app.post("/api/v1/investigations/{investigation_id}/evidence")
+def create_investigation_evidence(
+    investigation_id: str,
+    request: InvestigationEvidenceCreate,
+):
+    evidence_type = request.evidence_type.strip()
+    title = request.title.strip()
+    details = request.details.strip()
+
+    if not evidence_type or not title or not details:
+        raise HTTPException(
+            status_code=400,
+            detail="Evidence type, title, and details are required",
+        )
+
+    connection = investigation_connection()
+
+    exists = connection.execute(
+        "SELECT id FROM investigations WHERE id = ?",
+        (investigation_id,),
+    ).fetchone()
+
+    if exists is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Investigation was not found",
+        )
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    add_investigation_evidence(
+        connection,
+        investigation_id,
+        evidence_type,
+        title,
+        details,
+        now,
+    )
+
+    add_investigation_event(
+        connection,
+        investigation_id,
+        "evidence_added",
+        "Evidence added",
+        title,
+        now,
+    )
+
+    connection.commit()
+
+    row = connection.execute(
+        """
+        SELECT *
+        FROM investigation_evidence
+        WHERE investigation_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (investigation_id,),
+    ).fetchone()
+
+    connection.close()
+
+    return investigation_evidence_record(row)
 
 
 @app.patch("/api/v1/investigations/{investigation_id}")
@@ -325,6 +610,26 @@ def update_investigation(
     )
 
     updated_at = datetime.now(timezone.utc).isoformat()
+
+    if (status != existing["status"]):
+        add_investigation_event(
+            connection,
+            investigation_id,
+            "status_change",
+            "Case status changed",
+            f"{existing["status"]} → {status}",
+            updated_at,
+        )
+
+    if (notes != existing["notes"]):
+        add_investigation_event(
+            connection,
+            investigation_id,
+            "note_update",
+            "Investigator notes updated",
+            "Case notes were updated.",
+            updated_at,
+        )
 
     connection.execute(
         """
