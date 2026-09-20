@@ -59,10 +59,6 @@ export default function TransactionsPage() {
       limit: "100",
     });
 
-    if (query.trim()) {
-      params.set("query", query.trim());
-    }
-
     if (suspiciousOnly) {
       params.set("suspicious_only", "true");
     }
@@ -77,7 +73,7 @@ export default function TransactionsPage() {
         setTransactions(Array.isArray(data) ? data : []);
       })
       .catch(() => setTransactions([]));
-  }, [query, suspiciousOnly]);
+  }, [suspiciousOnly]);
 
   useEffect(() => {
     if (!selectedTransaction) {
@@ -97,6 +93,75 @@ export default function TransactionsPage() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [selectedTransaction]);
+
+  const filteredTransactions = transactions.filter((item) => {
+    const value = query.trim().toLowerCase();
+
+    if (!value) {
+      return true;
+    }
+
+    return [
+      item.transaction_id,
+      item.account,
+      item.counterparty,
+      item.currency,
+      item.payment_format,
+      item.pattern,
+    ].some((field) =>
+      String(field).toLowerCase().includes(value),
+    );
+  });
+
+  const exportResults = () => {
+    const headers = [
+      "Transaction",
+      "Timestamp",
+      "Account",
+      "Counterparty",
+      "Amount",
+      "Currency",
+      "Risk",
+      "Suspicious",
+      "Pattern",
+    ];
+
+    const rows = filteredTransactions.map((item) => [
+      item.transaction_id,
+      item.timestamp,
+      item.account,
+      item.counterparty,
+      item.amount,
+      item.currency,
+      item.risk,
+      item.suspicious ? "Yes" : "No",
+      item.pattern,
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) =>
+        row
+          .map((value) =>
+            '"' +
+            String(value).replace(/"/g, '""') +
+            '"',
+          )
+          .join(","),
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "aml-insight-transactions.csv";
+    link.click();
+
+    URL.revokeObjectURL(url);
+  };
 
   const reviewTransaction = async (item: Transaction) => {
     setSelectedTransaction(item);
@@ -182,7 +247,11 @@ export default function TransactionsPage() {
           </div>
 
           <div className="headerActions">
-            <button className="primary">
+            <button
+              className="primary"
+              type="button"
+              onClick={exportResults}
+            >
               Export results
             </button>
           </div>
@@ -196,16 +265,32 @@ export default function TransactionsPage() {
             </div>
 
             <span className="riskBadge">
-              {transactions.length} RESULTS
+              {filteredTransactions.length} RESULTS
             </span>
           </div>
 
           <div className="transactionExplorerFilters">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search account, counterparty, transaction or currency"
-            />
+            <div className="transactionSearchField">
+              <span className="transactionSearchIcon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
+                </svg>
+              </span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search account, counterparty, transaction or currency"
+                aria-label="Search transactions"
+              />
+            </div>
 
             <button
               className={
@@ -240,7 +325,7 @@ export default function TransactionsPage() {
               <span>Action</span>
             </div>
 
-            {transactions.map((item) => (
+            {filteredTransactions.map((item) => (
               <div
                 className="row transactionTableRow"
                 key={item.transaction_id}
