@@ -116,13 +116,11 @@ function PredictContent() {
         <nav>
           <a href="/">Overview</a>
           <a href="/transactions">Transactions</a>
-          <a href="/predict" className="active">
-            Predict
-          </a>
-          <a href="/">Network</a>
-          <a href="/">Alerts</a>
-          <a href="/">Investigations</a>
-          <a href="/">Models</a>
+          <a href="/predict" className="active">Predict</a>
+          <a href="/network">Network</a>
+          <a href="/alerts">Alerts</a>
+          <a href="/investigations">Investigations</a>
+          <a href="/models">Models</a>
         </nav>
 
         <div className="sidebarBottom">
