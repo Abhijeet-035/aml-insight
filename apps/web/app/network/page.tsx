@@ -1,6 +1,13 @@
 "use client";
 
-import { type FormEvent, type PointerEvent, type WheelEvent, useEffect, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type PointerEvent,
+  type WheelEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 type AccountSummary = {
   account: string;
@@ -195,12 +202,6 @@ function NetworkGraph({
     }
   };
 
-  const handleFullscreenChange = () => {
-    setIsFullscreen(
-      document.fullscreenElement === graphRef.current,
-    );
-  };
-
   const toggleFullscreen = async () => {
     if (!graphRef.current) {
       return;
@@ -217,6 +218,12 @@ function NetworkGraph({
   };
 
   useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(
+        document.fullscreenElement === graphRef.current,
+      );
+    };
+
     document.addEventListener(
       "fullscreenchange",
       handleFullscreenChange,
