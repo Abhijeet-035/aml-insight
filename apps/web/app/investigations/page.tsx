@@ -1,6 +1,10 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import {
+  type FormEvent,
+  useEffect,
+  useState,
+} from "react";
 
 type Account = {
   account: string;
@@ -23,32 +27,70 @@ type Relationship = {
   suspicious: number;
 };
 
+type Investigation = {
+  id: string;
+  account_id: string;
+  status: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+const statusOptions = [
+  "Open",
+  "In Review",
+  "Escalated",
+  "Closed",
+];
+
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function InvestigationsPage() {
-  const [accountId, setAccountId] = useState("80A21CFF0");
+  const [accountId, setAccountId] = useState("");
   const [account, setAccount] = useState<Account | null>(null);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [investigation, setInvestigation] =
+    useState<Investigation | null>(null);
+  const [status, setStatus] = useState("Open");
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
 
-  const investigate = async (event?: FormEvent) => {
-    event?.preventDefault();
+  const loadAccount = async (value: string) => {
+    const trimmedAccountId = value.trim();
+
+    if (!trimmedAccountId) {
+      setError("Enter an account ID to investigate.");
+      return;
+    }
+
     setLoading(true);
     setError("");
+    setSaveMessage("");
 
     try {
-      const encoded = encodeURIComponent(accountId.trim());
+      const encoded = encodeURIComponent(trimmedAccountId);
 
       const [accountResponse, networkResponse] =
         await Promise.all([
-          fetch(`${API_URL}/api/v1/account/${encoded}`),
-          fetch(`${API_URL}/api/v1/account/${encoded}/network?limit=50`),
+          fetch(
+            API_URL + "/api/v1/account/" + encoded,
+          ),
+          fetch(
+            API_URL +
+              "/api/v1/account/" +
+              encoded +
+              "/network?limit=50",
+          ),
         ]);
 
       if (!accountResponse.ok) {
-        throw new Error("Account was not found in the current dataset.");
+        throw new Error(
+          "Account was not found in the current dataset.",
+        );
       }
 
       const accountData = await accountResponse.json();
@@ -68,6 +110,127 @@ export default function InvestigationsPage() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const investigate = async (event?: FormEvent) => {
+    event?.preventDefault();
+    await loadAccount(accountId);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(
+      window.location.search,
+    );
+    const queryAccount = params.get("account");
+
+    if (queryAccount) {
+      setAccountId(queryAccount);
+      void loadAccount(queryAccount);
+    }
+  }, []);
+
+  const createInvestigation = async () => {
+    if (!account) {
+      setError(
+        "Investigate an account before creating a case.",
+      );
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSaveMessage("");
+
+    try {
+      const response = await fetch(
+        API_URL + "/api/v1/investigations",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            account_id: account.account,
+            notes,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail ?? "Unable to create investigation.",
+        );
+      }
+
+      setInvestigation(data);
+      setStatus(data.status);
+      setNotes(data.notes);
+      setSaveMessage(
+        data.id + " created successfully.",
+      );
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to create investigation.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveInvestigation = async () => {
+    if (!investigation) {
+      await createInvestigation();
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSaveMessage("");
+
+    try {
+      const response = await fetch(
+        API_URL +
+          "/api/v1/investigations/" +
+          encodeURIComponent(investigation.id),
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status,
+            notes,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail ?? "Unable to save investigation.",
+        );
+      }
+
+      setInvestigation(data);
+      setStatus(data.status);
+      setNotes(data.notes);
+      setSaveMessage(
+        data.id + " updated successfully.",
+      );
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to save investigation.",
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -141,6 +304,92 @@ export default function InvestigationsPage() {
 
         {account && (
           <>
+            <section className="panel">
+              <div className="panelHead">
+                <div>
+                  <span className="sectionLabel">
+                    CASE WORKSPACE
+                  </span>
+                  <h2>
+                    {investigation
+                      ? investigation.id
+                      : "New investigation"}
+                  </h2>
+                </div>
+                <span className="riskBadge">
+                  {investigation?.status ?? "NOT SAVED"}
+                </span>
+              </div>
+
+              <div className="investigationCaseGrid">
+                <div>
+                  <label htmlFor="investigation-status">
+                    Case status
+                  </label>
+                  <select
+                    id="investigation-status"
+                    value={status}
+                    onChange={(event) =>
+                      setStatus(event.target.value)
+                    }
+                  >
+                    {statusOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="investigation-account-value">
+                    Account
+                  </label>
+                  <input
+                    id="investigation-account-value"
+                    value={account.account}
+                    readOnly
+                  />
+                </div>
+              </div>
+
+              <div className="investigationNotes">
+                <label htmlFor="investigation-notes">
+                  Investigator notes
+                </label>
+                <textarea
+                  id="investigation-notes"
+                  value={notes}
+                  onChange={(event) =>
+                    setNotes(event.target.value)
+                  }
+                  placeholder="Record findings, rationale, and follow-up actions."
+                  rows={5}
+                />
+              </div>
+
+              <div className="investigationCaseActions">
+                <button
+                  className="primary"
+                  type="button"
+                  onClick={saveInvestigation}
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Saving..."
+                    : investigation
+                      ? "Save investigation"
+                      : "Create investigation"}
+                </button>
+
+                {saveMessage && (
+                  <span className="investigationSaveMessage">
+                    {saveMessage}
+                  </span>
+                )}
+              </div>
+            </section>
+
             <div className="metrics">
               {[
                 ["Transactions", account.transactions],
