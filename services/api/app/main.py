@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[1]
 MODEL_METRICS = ROOT / "models" / "metrics.json"
 MODEL_PATH = ROOT / "models" / "transaction_risk_xgb.joblib"
 PROCESSED = ROOT / "data" / "processed" / "transactions.csv"
