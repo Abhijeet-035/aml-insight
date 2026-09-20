@@ -64,6 +64,24 @@ export default function AlertsPage() {
   const [reviewError, setReviewError] = useState("");
 
   useEffect(() => {
+    if (!selectedAlert) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeReview();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedAlert]);
+
+  useEffect(() => {
     fetch(`${API_URL}/api/v1/alerts?limit=100`)
       .then(async (response) => {
         if (!response.ok) {
@@ -236,145 +254,163 @@ export default function AlertsPage() {
         </section>
 
         {selectedAlert && (
-          <section className="panel alertReviewPanel">
-            <div className="panelHead">
-              <div>
-                <span className="sectionLabel">ALERT REVIEW</span>
-                <h2>{selectedAlert.id}</h2>
-              </div>
-              <button
-                className="alertReviewClose"
-                type="button"
-                onClick={closeReview}
-              >
-                Close
-              </button>
-            </div>
-
-            {reviewLoading ? (
-              <div className="networkAccountEmpty">
-                Loading alert details...
-              </div>
-            ) : reviewError ? (
-              <p className="networkError">{reviewError}</p>
-            ) : alertReview ? (
-              <>
-                <div className="alertReviewSummary">
-                  <div>
-                    <span>Account</span>
-                    <strong>{alertReview.transaction.account}</strong>
-                  </div>
-                  <div>
-                    <span>Counterparty</span>
-                    <strong>
-                      {alertReview.transaction.counterparty_account}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Amount</span>
-                    <strong>
-                      {alertReview.transaction.receiving_currency}{" "}
-                      {formatMoney(
-                        alertReview.transaction.amount_received,
-                      )}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Alert risk</span>
-                    <strong>{selectedAlert.risk.toFixed(1)}%</strong>
-                  </div>
+          <div
+            className="alertReviewOverlay"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                closeReview();
+              }
+            }}
+          >
+            <section
+              className="alertReviewModal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="alert-review-title"
+            >
+              <div className="panelHead">
+                <div>
+                  <span className="sectionLabel">ALERT REVIEW</span>
+                  <h2 id="alert-review-title">{selectedAlert.id}</h2>
                 </div>
+                <button
+                  className="alertReviewClose"
+                  type="button"
+                  aria-label="Close alert review"
+                  onClick={closeReview}
+                >
+                  Close
+                </button>
+              </div>
 
-                <div className="alertReviewGrid">
-                  <div className="alertReviewDetails">
-                    <span className="sectionLabel">TRANSACTION</span>
-                    <dl>
-                      <div>
-                        <dt>Timestamp</dt>
-                        <dd>{alertReview.transaction.timestamp}</dd>
-                      </div>
-                      <div>
-                        <dt>From bank</dt>
-                        <dd>{alertReview.transaction.from_bank}</dd>
-                      </div>
-                      <div>
-                        <dt>To bank</dt>
-                        <dd>{alertReview.transaction.to_bank}</dd>
-                      </div>
-                      <div>
-                        <dt>Payment format</dt>
-                        <dd>{alertReview.transaction.payment_format}</dd>
-                      </div>
-                      <div>
-                        <dt>Paid amount</dt>
-                        <dd>
-                          {alertReview.transaction.payment_currency}{" "}
-                          {formatMoney(
-                            alertReview.transaction.amount_paid,
-                          )}
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-
-                  <div className="alertReviewDetails">
-                    <span className="sectionLabel">RISK SIGNALS</span>
-                    {alertReview.risk ? (
-                      <div className="alertReviewRisk">
-                        <strong>
-                          Model risk:{" "}
-                          {alertReview.risk.risk_score.toFixed(1)}%
-                        </strong>
-                        <span>
-                          Threshold:{" "}
-                          {(
-                            alertReview.risk.threshold * 100
-                          ).toFixed(1)}
-                          %
-                        </span>
-                      </div>
-                    ) : (
-                      <p className="networkAccountEmpty">
-                        Model explanation is unavailable. The alert
-                        typology remains available for review.
-                      </p>
-                    )}
-
-                    <div className="alertReviewSignals">
-                      {alertReview.explanation
-                        .slice(0, 5)
-                        .map((item) => (
-                          <div key={item.feature}>
-                            <span>{item.feature}</span>
-                            <strong>
-                              {item.contribution >= 0 ? "+" : ""}
-                              {item.contribution.toFixed(3)}
-                            </strong>
-                          </div>
-                        ))}
+              {reviewLoading ? (
+                <div className="networkAccountEmpty">
+                  Loading alert details...
+                </div>
+              ) : reviewError ? (
+                <p className="networkError">{reviewError}</p>
+              ) : alertReview ? (
+                <>
+                  <div className="alertReviewSummary">
+                    <div>
+                      <span>Account</span>
+                      <strong>{alertReview.transaction.account}</strong>
+                    </div>
+                    <div>
+                      <span>Counterparty</span>
+                      <strong>
+                        {alertReview.transaction.counterparty_account}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Amount</span>
+                      <strong>
+                        {alertReview.transaction.receiving_currency}{" "}
+                        {formatMoney(
+                          alertReview.transaction.amount_received,
+                        )}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Alert risk</span>
+                      <strong>{selectedAlert.risk.toFixed(1)}%</strong>
                     </div>
                   </div>
-                </div>
 
-                <div className="alertReviewActions">
-                  <a
-                    className="primary"
-                    href={
-                      "/investigations?account=" +
-                      encodeURIComponent(
-                        alertReview.transaction.account,
-                      )
-                    }
-                  >
-                    Investigate account
-                  </a>
-                  <span className="alertPattern">
-                    {selectedAlert.pattern}
-                  </span>
-                </div>
-              </>
-            ) : null}
-          </section>
+                  <div className="alertReviewGrid">
+                    <div className="alertReviewDetails">
+                      <span className="sectionLabel">TRANSACTION</span>
+                      <dl>
+                        <div>
+                          <dt>Timestamp</dt>
+                          <dd>{alertReview.transaction.timestamp}</dd>
+                        </div>
+                        <div>
+                          <dt>From bank</dt>
+                          <dd>{alertReview.transaction.from_bank}</dd>
+                        </div>
+                        <div>
+                          <dt>To bank</dt>
+                          <dd>{alertReview.transaction.to_bank}</dd>
+                        </div>
+                        <div>
+                          <dt>Payment format</dt>
+                          <dd>
+                            {alertReview.transaction.payment_format}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Paid amount</dt>
+                          <dd>
+                            {alertReview.transaction.payment_currency}{" "}
+                            {formatMoney(
+                              alertReview.transaction.amount_paid,
+                            )}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    <div className="alertReviewDetails">
+                      <span className="sectionLabel">RISK SIGNALS</span>
+                      {alertReview.risk ? (
+                        <div className="alertReviewRisk">
+                          <strong>
+                            Model risk:{" "}
+                            {alertReview.risk.risk_score.toFixed(1)}%
+                          </strong>
+                          <span>
+                            Threshold:{" "}
+                            {(
+                              alertReview.risk.threshold * 100
+                            ).toFixed(1)}
+                            %
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="networkAccountEmpty">
+                          Model explanation is unavailable. The alert
+                          typology remains available for review.
+                        </p>
+                      )}
+
+                      <div className="alertReviewSignals">
+                        {alertReview.explanation
+                          .slice(0, 5)
+                          .map((item) => (
+                            <div key={item.feature}>
+                              <span>{item.feature}</span>
+                              <strong>
+                                {item.contribution >= 0 ? "+" : ""}
+                                {item.contribution.toFixed(3)}
+                              </strong>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="alertReviewActions">
+                    <a
+                      className="primary"
+                      href={
+                        "/investigations?account=" +
+                        encodeURIComponent(
+                          alertReview.transaction.account,
+                        )
+                      }
+                    >
+                      Investigate account
+                    </a>
+                    <span className="alertPattern">
+                      {selectedAlert.pattern}
+                    </span>
+                  </div>
+                </>
+              ) : null}
+            </section>
+          </div>
         )}
       </section>
     </main>
