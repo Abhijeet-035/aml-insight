@@ -2979,3 +2979,37 @@ button {
         justify-self: start;
     }
 }
+
+
+.investigationCaseFilters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 180px;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.investigationCaseFilters input,
+.investigationCaseFilters select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 10px 11px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #ffffff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 11px;
+}
+
+.investigationCaseFilters input:focus,
+.investigationCaseFilters select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+@media (max-width: 700px) {
+    .investigationCaseFilters {
+        grid-template-columns: 1fr;
+    }
+}
