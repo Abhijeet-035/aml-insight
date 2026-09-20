@@ -17,6 +17,12 @@ const fallbackAlerts: Alert[] = [
 const formatNumber = (value: number) => new Intl.NumberFormat("en-US", { notation: value >= 1000000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(value);
 const formatMoney = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: value >= 1000000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(value);
 
+const escapeCsv = (value: string | number) => {
+  const text = String(value);
+
+  return `"${text.replaceAll('"', '""')}"`;
+};
+
 function Network({ data }: { data: Network | null }) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -706,6 +712,46 @@ export default function Home() {
 
   const metrics = [["Transactions", formatNumber(overview.transactions), overview.data_status === "processed_dataset" ? "Processed dataset" : "Local demo dataset"], ["Alerts", formatNumber(overview.alerts), "Observed laundering labels"], ["Risk volume", formatMoney(overview.risk_volume), "Observed suspicious volume"], ["Network nodes", formatNumber(overview.network_nodes), "Accounts in transaction graph"]];
 
+  const handleExport = () => {
+    const rows = [
+      ["AML Insight Overview Export"],
+      [],
+      ["Metric", "Value", "Detail"],
+      ...metrics,
+      [],
+      ["Priority Alerts"],
+      ["Alert ID", "Account", "Counterparty", "Amount", "Currency", "Risk", "Pattern"],
+      ...alerts.map((alert) => [
+        alert.id,
+        alert.account,
+        alert.counterparty,
+        alert.amount,
+        alert.currency,
+        `${alert.risk}%`,
+        alert.pattern,
+      ]),
+    ];
+
+    const csv = rows
+      .map((row) => row.map((value) => escapeCsv(value ?? "")).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "aml-insight-overview.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleNewInvestigation = () => {
+    window.location.href = "/investigations";
+  };
+
   return <main>
     <aside><div className="brand"><div className="brandMark">A</div><div><strong>AML Insight</strong><small>Transaction Intelligence</small></div></div><nav>
           <a className="active" href="/">Overview</a>
@@ -717,7 +763,7 @@ export default function Home() {
           <a href="/models">Models</a>
         </nav><div className="sidebarBottom"><span>IBM AML Benchmark</span><span>{overview.data_status === "processed_dataset" ? "HI-Small loaded" : "Demo mode"}</span></div></aside>
     <section className="content">
-      <header><div><p className="eyebrow">ANTI-MONEY LAUNDERING</p><h1>Investigation command center</h1><p className="subtitle">Detect suspicious transaction behavior across connected financial networks.</p></div><div className="headerActions"><button>Export</button><button className="primary">New investigation</button></div></header>
+      <header><div><p className="eyebrow">ANTI-MONEY LAUNDERING</p><h1>Investigation command center</h1><p className="subtitle">Detect suspicious transaction behavior across connected financial networks.</p></div><div className="headerActions"><button type="button" onClick={handleExport}>Export</button><button type="button" className="primary" onClick={handleNewInvestigation}>New investigation</button></div></header>
       <div className="metrics">{metrics.map(([label, value, detail]) => <div className="metric" key={label}><span>{label}</span><strong>{value}</strong><small>{detail}</small></div>)}</div>
       <div className="grid">
         <section className="panel networkPanel"><div className="panelHead"><div><span className="sectionLabel">NETWORK INTELLIGENCE</span><h2>Suspicious relationship map</h2></div><span className="riskBadge">{overview.alerts ? "RISK SIGNALS" : "NO DATA"}</span></div><Network data={network} /><div className="networkLegend"><span><i />Account</span><span><i className="danger" />Suspicious flow</span><span><i className="muted" />Related account</span></div></section>
