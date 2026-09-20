@@ -2539,3 +2539,52 @@ button {
         z-index: 10002 !important;
     }
 }
+
+
+@media (max-width: 1000px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    main {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: hidden;
+    }
+
+    .content {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        margin-left: 0;
+        box-sizing: border-box;
+    }
+
+    header,
+    .panel,
+    .metric,
+    .metrics,
+    .networkSearchPanel,
+    .networkGraphPanel,
+    .accountProfilePanel,
+    .relationshipPanel,
+    .networkInvestigationGrid,
+    .networkMetrics {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .panelHead {
+        min-width: 0;
+    }
+
+    .relationshipList {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+}
