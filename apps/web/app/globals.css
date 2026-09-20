@@ -893,6 +893,7 @@ button {
     place-items: center;
     width: 30px;
     height: 30px;
+    min-height: 0;
     padding: 0;
     border: 1px solid transparent;
     border-radius: 6px;
