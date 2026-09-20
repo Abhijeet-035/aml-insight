@@ -617,7 +617,7 @@ def update_investigation(
             investigation_id,
             "status_change",
             "Case status changed",
-            f"{existing["status"]} → {status}",
+            f"{existing['status']} → {status}",
             updated_at,
         )
 
