@@ -2588,3 +2588,85 @@ button {
         overflow-x: auto;
     }
 }
+
+.investigationCaseGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.investigationCaseGrid > div,
+.investigationNotes {
+    display: grid;
+    gap: 6px;
+}
+
+.investigationCaseGrid label,
+.investigationNotes label {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.investigationCaseGrid input,
+.investigationCaseGrid select,
+.investigationNotes textarea {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--ink);
+    font: inherit;
+}
+
+.investigationCaseGrid input,
+.investigationCaseGrid select {
+    height: 40px;
+    padding: 0 11px;
+}
+
+.investigationNotes {
+    margin-top: 12px;
+}
+
+.investigationNotes textarea {
+    resize: vertical;
+    min-height: 120px;
+    padding: 10px 11px;
+    line-height: 1.5;
+}
+
+.investigationCaseActions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.investigationCaseActions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.investigationSaveMessage {
+    color: var(--success, #2f6f4e);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+@media (max-width: 700px) {
+    .investigationCaseGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .investigationCaseActions {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
