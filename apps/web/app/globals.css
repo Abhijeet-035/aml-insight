@@ -3631,8 +3631,8 @@ button {
         padding: 0 12px;
     }
 
-    .alertsPanel .alertReviewButton::before,
-    .alertsPanel .analyzeLink::before {
+    .alertsPanel .row > .alertReviewButton::before,
+    .alertsPanel .row > .analyzeLink::before {
         content: none;
     }
 
