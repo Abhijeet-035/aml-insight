@@ -2,15 +2,41 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-type Alert = {
-  id: string;
+type Transaction = {
   transaction_id: number;
+  timestamp: string;
   account: string;
   counterparty: string;
   amount: number;
   currency: string;
+  payment_format: string;
   risk: number;
+  suspicious: boolean;
   pattern: string;
+};
+
+type TransactionReview = {
+  transaction: {
+    transaction_id: number;
+    timestamp: string;
+    from_bank: string;
+    account: string;
+    to_bank: string;
+    counterparty_account: string;
+    amount_received: number;
+    receiving_currency: string;
+    amount_paid: number;
+    payment_currency: string;
+    payment_format: string;
+  };
+  risk: {
+    risk_score: number;
+    threshold: number;
+  };
+  explanation: {
+    feature: string;
+    contribution: number;
+  }[];
 };
 
 const fallback: Alert[] = [
@@ -57,23 +83,105 @@ const fallback: Alert[] = [
 ];
 
 export default function TransactionsPage() {
-  const [alerts, setAlerts] = useState<Alert[]>(fallback);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [query, setQuery] = useState("");
+  const [suspiciousOnly, setSuspiciousOnly] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+  const [review, setReview] = useState<TransactionReview | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   useEffect(() => {
     const base =
       process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-    fetch(`${base}/api/v1/alerts`)
+    const params = new URLSearchParams({
+      limit: "100",
+    });
+
+    if (query.trim()) {
+      params.set("query", query.trim());
+    }
+
+    if (suspiciousOnly) {
+      params.set("suspicious_only", "true");
+    }
+
+    fetch(
+      base +
+        "/api/v1/transactions?" +
+        params.toString(),
+    )
       .then((response) => (response.ok ? response.json() : []))
       .then((data) => {
-        if (Array.isArray(data) && data.length) {
-          setAlerts(data);
-        }
+        setTransactions(Array.isArray(data) ? data : []);
       })
-      .catch(() => undefined);
-  }, []);
+      .catch(() => setTransactions([]));
+  }, [query, suspiciousOnly]);
 
+  useEffect(() => {
+    if (!selectedTransaction) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedTransaction(null);
+        setReview(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedTransaction]);
+
+  const reviewTransaction = async (item: Transaction) => {
+    setSelectedTransaction(item);
+    setReview(null);
+    setReviewError("");
+    setReviewLoading(true);
+
+    const base =
+      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+    try {
+      const response = await fetch(
+        base +
+          "/api/v1/transaction/" +
+          item.transaction_id +
+          "/predict",
+        {
+          method: "POST",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Unable to load transaction analysis.");
+      }
+
+      const data = await response.json();
+
+      setReview({
+        transaction: data.transaction,
+        risk: data.risk,
+        explanation: data.explanation ?? [],
+      });
+    } catch (requestError) {
+      setReviewError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to load transaction analysis.",
+      );
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const filtered = transactions;
   const filtered = useMemo(() => {
     const value = query.trim().toLowerCase();
 
@@ -144,24 +252,32 @@ export default function TransactionsPage() {
             </div>
 
             <span className="riskBadge">
-              {filtered.length} RESULTS
+              {transactions.length} RESULTS
             </span>
           </div>
 
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search account, counterparty, case, currency or pattern"
-            style={{
-              width: "100%",
-              marginTop: 18,
-              padding: "12px 14px",
-              border: "1px solid var(--line)",
-              borderRadius: 8,
-              fontSize: 12,
-              outline: "none",
-            }}
-          />
+          <div className="transactionExplorerFilters">
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search account, counterparty, transaction or currency"
+            />
+
+            <button
+              className={
+                "transactionFilterButton" +
+                (suspiciousOnly ? " active" : "")
+              }
+              type="button"
+              onClick={() =>
+                setSuspiciousOnly((value) => !value)
+              }
+            >
+              {suspiciousOnly
+                ? "Suspicious only"
+                : "All transactions"}
+            </button>
+          </div>
 
           <div className="table transactionTable">
             <div
@@ -171,7 +287,7 @@ export default function TransactionsPage() {
                 color: "var(--ink)",
               }}
             >
-              <span>Case</span>
+              <span>Transaction</span>
               <span>Account</span>
               <span>Counterparty</span>
               <span>Amount</span>
@@ -180,55 +296,204 @@ export default function TransactionsPage() {
               <span>Action</span>
             </div>
 
-            {filtered.map((item) => (
+            {transactions.map((item) => (
               <div
                 className="row transactionTableRow"
-                key={item.id}
+                key={item.transaction_id}
               >
-                <span
-                  className="caseId"
-                  data-label="Case"
-                >
-                  {item.id}
+                <span className="caseId" data-label="Transaction">
+                  TX-{item.transaction_id}
                 </span>
-
-                <span data-label="Account">
-                  {item.account}
-                </span>
-
+                <span data-label="Account">{item.account}</span>
                 <span data-label="Counterparty">
                   {item.counterparty}
                 </span>
-
                 <span data-label="Amount">
-                  {item.currency}{" "}
-                  {item.amount.toLocaleString()}
+                  {item.currency} {item.amount.toLocaleString()}
                 </span>
-
                 <span
-                  className="riskText"
+                  className={
+                    item.suspicious
+                      ? "riskText"
+                      : "transactionRiskNormal"
+                  }
                   data-label="Risk"
                 >
                   {item.risk.toFixed(1)}%
                 </span>
-
-                <span
-                  className="pattern"
-                  data-label="Pattern"
-                >
+                <span className="pattern" data-label="Pattern">
                   {item.pattern}
                 </span>
-
-                <a
-                  href={`/predict?transaction_id=${item.transaction_id}`}
+                <button
                   className="linkButton"
-                  data-label="Action"
+                  type="button"
+                  onClick={() => void reviewTransaction(item)}
                 >
-                  Analyze
-                </a>
+                  Review
+                </button>
               </div>
             ))}
           </div>
+
+          {selectedTransaction && (
+            <div
+              className="transactionReviewOverlay"
+              role="presentation"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setSelectedTransaction(null);
+                  setReview(null);
+                }
+              }}
+            >
+              <section
+                className="transactionReviewModal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="transaction-review-title"
+              >
+                <div className="panelHead">
+                  <div>
+                    <span className="sectionLabel">
+                      TRANSACTION REVIEW
+                    </span>
+                    <h2 id="transaction-review-title">
+                      TX-{selectedTransaction.transaction_id}
+                    </h2>
+                  </div>
+                  <button
+                    className="alertReviewClose"
+                    type="button"
+                    onClick={() => {
+                      setSelectedTransaction(null);
+                      setReview(null);
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+
+                {reviewLoading ? (
+                  <div className="networkAccountEmpty">
+                    Loading transaction analysis...
+                  </div>
+                ) : reviewError ? (
+                  <p className="networkError">{reviewError}</p>
+                ) : review ? (
+                  <>
+                    <div className="alertReviewSummary">
+                      <div>
+                        <span>Account</span>
+                        <strong>
+                          {review.transaction.account}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Counterparty</span>
+                        <strong>
+                          {review.transaction.counterparty_account}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Amount</span>
+                        <strong>
+                          {review.transaction.receiving_currency}{" "}
+                          {review.transaction.amount_received.toLocaleString()}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Risk</span>
+                        <strong>
+                          {review.risk.risk_score.toFixed(1)}%
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="alertReviewGrid">
+                      <div className="alertReviewDetails">
+                        <span className="sectionLabel">
+                          TRANSACTION
+                        </span>
+                        <dl>
+                          <div>
+                            <dt>Timestamp</dt>
+                            <dd>{review.transaction.timestamp}</dd>
+                          </div>
+                          <div>
+                            <dt>From bank</dt>
+                            <dd>{review.transaction.from_bank}</dd>
+                          </div>
+                          <div>
+                            <dt>To bank</dt>
+                            <dd>{review.transaction.to_bank}</dd>
+                          </div>
+                          <div>
+                            <dt>Payment format</dt>
+                            <dd>
+                              {review.transaction.payment_format}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Paid amount</dt>
+                            <dd>
+                              {review.transaction.payment_currency}{" "}
+                              {review.transaction.amount_paid.toLocaleString()}
+                            </dd>
+                          </div>
+                        </dl>
+                      </div>
+
+                      <div className="alertReviewDetails">
+                        <span className="sectionLabel">
+                          RISK SIGNALS
+                        </span>
+                        <div className="alertReviewRisk">
+                          <strong>
+                            Model risk:{" "}
+                            {review.risk.risk_score.toFixed(1)}%
+                          </strong>
+                          <span>
+                            Threshold:{" "}
+                            {(review.risk.threshold * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="alertReviewSignals">
+                          {review.explanation
+                            .slice(0, 5)
+                            .map((item) => (
+                              <div key={item.feature}>
+                                <span>{item.feature}</span>
+                                <strong>
+                                  {item.contribution >= 0 ? "+" : ""}
+                                  {item.contribution.toFixed(3)}
+                                </strong>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="alertReviewActions">
+                      <a
+                        className="primary"
+                        href={
+                          "/investigations?account=" +
+                          encodeURIComponent(
+                            review.transaction.account,
+                          )
+                        }
+                      >
+                        Investigate account
+                      </a>
+                      <span className="alertPattern">
+                        {selectedTransaction.pattern}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
+              </section>
+            </div>
+          )}
         </section>
       </section>
     </main>
