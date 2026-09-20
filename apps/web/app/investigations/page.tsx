@@ -193,7 +193,7 @@ export default function InvestigationsPage() {
     ]);
 
     const escapeCsvValue = (value: string) =>
-      """ + value.replace(/"/g, """") + """;
+      "\"" + value.replace(/"/g, "\"\"") + "\"";
 
     const csv = [headers, ...rows]
       .map((row) => row.map(escapeCsvValue).join(","))
