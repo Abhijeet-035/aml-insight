@@ -138,7 +138,7 @@ export default function InvestigationsPage() {
     try {
       const encoded = encodeURIComponent(trimmedAccountId);
 
-      const [accountResponse, networkResponse] =
+      const [accountResponse, networkResponse, investigationsResponse] =
         await Promise.all([
           fetch(
             API_URL + "/api/v1/account/" + encoded,
@@ -148,6 +148,11 @@ export default function InvestigationsPage() {
               "/api/v1/account/" +
               encoded +
               "/network?limit=50",
+          ),
+          fetch(
+            API_URL +
+              "/api/v1/investigations?account_id=" +
+              encoded,
           ),
         ]);
 
@@ -161,12 +166,34 @@ export default function InvestigationsPage() {
       const networkData = networkResponse.ok
         ? await networkResponse.json()
         : { edges: [] };
+      const investigationsData = investigationsResponse.ok
+        ? await investigationsResponse.json()
+        : [];
+
+      const latestInvestigation = investigationsData[0] ?? null;
 
       setAccount(accountData);
       setRelationships(networkData.edges ?? []);
+      setInvestigation(latestInvestigation);
+      setStatus(latestInvestigation?.status ?? "Open");
+      setNotes(latestInvestigation?.notes ?? "");
+      setTimeline([]);
+      setEvidence([]);
+
+      window.localStorage.setItem(
+        "aml-insight-last-investigation-account",
+        trimmedAccountId,
+      );
+
+      if (latestInvestigation) {
+        await loadCaseActivity(latestInvestigation.id);
+      }
     } catch (requestError) {
       setAccount(null);
       setRelationships([]);
+      setInvestigation(null);
+      setTimeline([]);
+      setEvidence([]);
       setError(
         requestError instanceof Error
           ? requestError.message
@@ -175,7 +202,7 @@ export default function InvestigationsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadCaseActivity]);
 
   const investigate = async (event?: FormEvent) => {
     event?.preventDefault();
@@ -187,10 +214,14 @@ export default function InvestigationsPage() {
       window.location.search,
     );
     const queryAccount = params.get("account");
+    const savedAccount = window.localStorage.getItem(
+      "aml-insight-last-investigation-account",
+    );
+    const initialAccount = queryAccount ?? savedAccount;
 
-    if (queryAccount) {
-      setAccountId(queryAccount);
-      void loadAccount(queryAccount);
+    if (initialAccount) {
+      setAccountId(initialAccount);
+      void loadAccount(initialAccount);
     }
   }, [loadAccount]);
 
@@ -303,6 +334,16 @@ export default function InvestigationsPage() {
     } finally {
       setEvidenceSaving(false);
     }
+  };
+
+  const startNewInvestigation = () => {
+    setInvestigation(null);
+    setStatus("Open");
+    setNotes("");
+    setTimeline([]);
+    setEvidence([]);
+    setSaveMessage("");
+    setError("");
   };
 
   const saveInvestigation = async () => {
@@ -493,6 +534,16 @@ export default function InvestigationsPage() {
               </div>
 
               <div className="investigationCaseActions">
+                {investigation && (
+                  <button
+                    className="investigationNewCaseButton"
+                    type="button"
+                    onClick={startNewInvestigation}
+                  >
+                    New investigation
+                  </button>
+                )}
+
                 <button
                   className="primary"
                   type="button"
