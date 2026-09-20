@@ -6,6 +6,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import sqlite3
+import xgboost as xgb
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -215,6 +216,7 @@ def predict_transaction(transaction_id: int):
             status_code=404,
             detail="Transaction feature record not found",
         )
+
     metadata = transaction_metadata_row(transaction_id)
 
     if metadata is None:
@@ -229,30 +231,67 @@ def predict_transaction(transaction_id: int):
     )
 
     probability = float(model.predict_proba(features)[0, 1])
+
+    booster = model.get_booster()
+
+    contribution_matrix = booster.predict(
+        xgb.DMatrix(
+            features,
+            feature_names=MODEL_FEATURES,
+        ),
+        pred_contribs=True,
+    )
+
+    contributions = contribution_matrix[0]
+
+    explanation = []
+
+    for index, feature in enumerate(MODEL_FEATURES):
+        explanation.append(
+            {
+                "feature": feature,
+                "value": float(row[feature]),
+                "contribution": float(contributions[index]),
+                "direction": (
+                    "increases_risk"
+                    if contributions[index] > 0
+                    else "decreases_risk"
+                    if contributions[index] < 0
+                    else "neutral"
+                ),
+            }
+        )
+
+    explanation.sort(
+        key=lambda item: abs(item["contribution"]),
+        reverse=True,
+    )
+
     status = model_status()
     threshold = float(status["metrics"]["selected_threshold"])
 
     return {
-    "transaction": {
-        "transaction_id": metadata["transaction_id"],
-        "timestamp": metadata["timestamp"],
-        "from_bank": metadata["from_bank"],
-        "account": metadata["account"],
-        "to_bank": metadata["to_bank"],
-        "counterparty_account": metadata["counterparty_account"],
-        "amount_received": metadata["amount_received"],
-        "receiving_currency": metadata["receiving_currency"],
-        "amount_paid": metadata["amount_paid"],
-        "payment_currency": metadata["payment_currency"],
-        "payment_format": metadata["payment_format"],
-    },
-    "risk": {
-        "risk_probability": probability,
-        "risk_score": round(probability * 100, 2),
-        "threshold": threshold,
-        "prediction": int(probability >= threshold),
-    },
-}
+        "transaction": {
+            "transaction_id": metadata["transaction_id"],
+            "timestamp": metadata["timestamp"],
+            "from_bank": metadata["from_bank"],
+            "account": metadata["account"],
+            "to_bank": metadata["to_bank"],
+            "counterparty_account": metadata["counterparty_account"],
+            "amount_received": metadata["amount_received"],
+            "receiving_currency": metadata["receiving_currency"],
+            "amount_paid": metadata["amount_paid"],
+            "payment_currency": metadata["payment_currency"],
+            "payment_format": metadata["payment_format"],
+        },
+        "risk": {
+            "risk_probability": probability,
+            "risk_score": round(probability * 100, 2),
+            "threshold": threshold,
+            "prediction": int(probability >= threshold),
+        },
+        "explanation": explanation,
+    }
 
 @app.get("/api/v1/alerts")
 def alerts(limit: int = 20):

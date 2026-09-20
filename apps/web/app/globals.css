@@ -383,15 +383,15 @@ button {
 }
 
 .linkButton {
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 800;
-  text-decoration: none;
-  justify-self: start;
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 800;
+    text-decoration: none;
+    justify-self: start;
 }
 
 .linkButton:hover {
-  text-decoration: underline;
+    text-decoration: underline;
 }
 
 .table {
@@ -500,8 +500,8 @@ button {
         grid-template-columns: 1fr 1fr;
     }
 
-    .row > span:nth-child(n + 3),
-    .row > a {
+    .row>span:nth-child(n + 3),
+    .row>a {
         display: none;
     }
 }
@@ -658,6 +658,90 @@ button {
     margin-bottom: 7px;
 }
 
+.explanationPanel {
+    width: 100%;
+    margin-top: 16px;
+}
+
+.explanationIntro {
+    max-width: 780px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.explanationGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.signalGroup {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.signalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #f7f9fb;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.signalRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
+}
+
+.signalRow:last-child {
+    border-bottom: none;
+}
+
+.signalRow div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.signalRow div strong {
+    color: var(--ink);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+.signalRow div span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.positiveContribution,
+.negativeContribution {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.positiveContribution {
+    color: var(--danger);
+}
+
+.negativeContribution {
+    color: #2c7544;
+}
+
 @media (max-width: 800px) {
     .predictForm {
         display: grid;
@@ -673,5 +757,13 @@ button {
 
     .detailGrid {
         grid-template-columns: 1fr;
+    }
+
+    .explanationGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .signalRow {
+        gap: 10px;
     }
 }

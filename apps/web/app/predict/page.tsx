@@ -22,6 +22,12 @@ type PredictionResponse = {
     threshold: number;
     prediction: number;
   };
+  explanation: {
+    feature: string;
+    value: number;
+    contribution: number;
+    direction: "increases_risk" | "decreases_risk" | "neutral";
+  }[];
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -83,6 +89,18 @@ function PredictContent() {
   const riskPercentage = result
     ? result.risk.risk_probability * 100
     : 0;
+
+  const positiveSignals = result
+    ? result.explanation
+      .filter((item) => item.direction === "increases_risk")
+      .slice(0, 4)
+    : [];
+
+  const negativeSignals = result
+    ? result.explanation
+      .filter((item) => item.direction === "decreases_risk")
+      .slice(0, 4)
+    : [];
 
   return (
     <main>
@@ -264,8 +282,65 @@ function PredictContent() {
                   : "Not Suspicious"}
               </div>
             </section>
+            <section className="panel explanationPanel">
+              <div className="panelHead">
+                <div>
+                  <p className="sectionLabel">MODEL EXPLANATION</p>
+                  <h2>Explainable Risk Signals</h2>
+                </div>
+              </div>
+
+              <p className="explanationIntro">
+                These signals show which model features pushed the prediction
+                upward or downward for this transaction. They describe model
+                behavior and should not be interpreted as causal evidence.
+              </p>
+
+              <div className="explanationGrid">
+                <div className="signalGroup">
+                  <div className="signalHeader">
+                    <span>INCREASES RISK</span>
+                    <span>CONTRIBUTION</span>
+                  </div>
+
+                  {positiveSignals.map((item) => (
+                    <div className="signalRow" key={item.feature}>
+                      <div>
+                        <strong>{item.feature}</strong>
+                        <span>Value: {item.value.toLocaleString()}</span>
+                      </div>
+
+                      <strong className="positiveContribution">
+                        +{item.contribution.toFixed(4)}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="signalGroup">
+                  <div className="signalHeader">
+                    <span>DECREASES RISK</span>
+                    <span>CONTRIBUTION</span>
+                  </div>
+
+                  {negativeSignals.map((item) => (
+                    <div className="signalRow" key={item.feature}>
+                      <div>
+                        <strong>{item.feature}</strong>
+                        <span>Value: {item.value.toLocaleString()}</span>
+                      </div>
+
+                      <strong className="negativeContribution">
+                        {item.contribution.toFixed(4)}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
           </div>
         )}
+
       </section>
     </main>
   );
