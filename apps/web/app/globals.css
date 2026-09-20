@@ -2900,3 +2900,82 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+
+.investigationCaseListPanel {
+    margin-bottom: 16px;
+}
+
+.investigationCaseList {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.investigationCaseListItem {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: #ffffff;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+}
+
+.investigationCaseListItem:hover {
+    border-color: #c6d6e5;
+    background: #f8fbff;
+}
+
+.investigationCaseListItem.selected {
+    border-color: var(--accent);
+    background: var(--soft);
+}
+
+.investigationCaseListItem > span:first-child {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.investigationCaseListItem strong {
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+.investigationCaseListItem small {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.investigationCaseListStatus {
+    justify-self: start;
+    padding: 5px 8px;
+    border-radius: 5px;
+    background: #eef7f0;
+    color: #2c7544;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.investigationCaseListDate {
+    justify-self: end;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+@media (max-width: 700px) {
+    .investigationCaseListItem {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .investigationCaseListDate {
+        justify-self: start;
+    }
+}
