@@ -506,6 +506,15 @@ export default function TransactionsPage() {
                       <a
                         className="primary"
                         href={
+                          "/predict?transaction_id=" +
+                          review.transaction.transaction_id
+                        }
+                      >
+                        Open in Predict
+                      </a>
+                      <a
+                        className="primary"
+                        href={
                           "/investigations?account=" +
                           encodeURIComponent(
                             review.transaction.account,
