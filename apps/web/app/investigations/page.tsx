@@ -165,6 +165,54 @@ export default function InvestigationsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const exportCases = () => {
+    if (!filteredInvestigations.length) {
+      return;
+    }
+
+    const headers = [
+      "Case ID",
+      "Account",
+      "Status",
+      "Resolution",
+      "Resolution Notes",
+      "Notes",
+      "Created At",
+      "Updated At",
+    ];
+
+    const rows = filteredInvestigations.map((item) => [
+      item.id,
+      item.account_id,
+      item.status,
+      item.resolution ?? "",
+      item.resolution_notes,
+      item.notes,
+      item.created_at,
+      item.updated_at,
+    ]);
+
+    const escapeCsvValue = (value: string) =>
+      """ + value.replace(/"/g, """") + """;
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map(escapeCsvValue).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "aml-insight-investigation-cases.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const loadInvestigations = useCallback(async () => {
     setCasesLoading(true);
 
@@ -589,9 +637,19 @@ export default function InvestigationsPage() {
               <span className="sectionLabel">CASE MANAGEMENT</span>
               <h2>Investigation cases</h2>
             </div>
-            <span className="riskBadge">
-              {investigations.length} CASES
-            </span>
+            <div className="investigationCaseHeaderActions">
+              <button
+                className="secondaryButton investigationCaseExportButton"
+                type="button"
+                onClick={exportCases}
+                disabled={!filteredInvestigations.length}
+              >
+                Export CSV
+              </button>
+              <span className="riskBadge">
+                {investigations.length} CASES
+              </span>
+            </div>
           </div>
 
           {!casesLoading && investigations.length > 0 && (
