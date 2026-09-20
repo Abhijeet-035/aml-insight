@@ -37,11 +37,37 @@ type Investigation = {
   updated_at: string;
 };
 
+type InvestigationTimelineEvent = {
+  id: number;
+  investigation_id: string;
+  event_type: string;
+  title: string;
+  details: string;
+  created_at: string;
+};
+
+type InvestigationEvidence = {
+  id: number;
+  investigation_id: string;
+  evidence_type: string;
+  title: string;
+  details: string;
+  created_at: string;
+};
+
 const statusOptions = [
   "Open",
   "In Review",
   "Escalated",
   "Closed",
+];
+
+const evidenceTypes = [
+  "Analyst finding",
+  "Transaction activity",
+  "Network relationship",
+  "Risk signal",
+  "Other",
 ];
 
 const API_URL =
@@ -59,6 +85,43 @@ export default function InvestigationsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+  const [timeline, setTimeline] = useState<InvestigationTimelineEvent[]>([]);
+  const [evidence, setEvidence] = useState<InvestigationEvidence[]>([]);
+  const [evidenceType, setEvidenceType] = useState("Analyst finding");
+  const [evidenceTitle, setEvidenceTitle] = useState("");
+  const [evidenceDetails, setEvidenceDetails] = useState("");
+  const [evidenceSaving, setEvidenceSaving] = useState(false);
+
+  const loadCaseActivity = useCallback(async (investigationId: string) => {
+    const encodedId = encodeURIComponent(investigationId);
+
+    const [timelineResponse, evidenceResponse] = await Promise.all([
+      fetch(
+        API_URL +
+          "/api/v1/investigations/" +
+          encodedId +
+          "/timeline",
+      ),
+      fetch(
+        API_URL +
+          "/api/v1/investigations/" +
+          encodedId +
+          "/evidence",
+      ),
+    ]);
+
+    if (!timelineResponse.ok || !evidenceResponse.ok) {
+      throw new Error("Unable to load investigation activity.");
+    }
+
+    const [timelineData, evidenceData] = await Promise.all([
+      timelineResponse.json(),
+      evidenceResponse.json(),
+    ]);
+
+    setTimeline(timelineData);
+    setEvidence(evidenceData);
+  }, []);
 
   const loadAccount = useCallback(async (value: string) => {
     const trimmedAccountId = value.trim();
@@ -169,6 +232,7 @@ export default function InvestigationsPage() {
       setInvestigation(data);
       setStatus(data.status);
       setNotes(data.notes);
+      await loadCaseActivity(data.id);
       setSaveMessage(
         data.id + " created successfully.",
       );
@@ -180,6 +244,64 @@ export default function InvestigationsPage() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const addEvidence = async () => {
+    if (!investigation) {
+      setError("Create the investigation before adding evidence.");
+      return;
+    }
+
+    if (!evidenceTitle.trim() || !evidenceDetails.trim()) {
+      setError("Enter an evidence title and details.");
+      return;
+    }
+
+    setEvidenceSaving(true);
+    setError("");
+    setSaveMessage("");
+
+    try {
+      const response = await fetch(
+        API_URL +
+          "/api/v1/investigations/" +
+          encodeURIComponent(investigation.id) +
+          "/evidence",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            evidence_type: evidenceType,
+            title: evidenceTitle,
+            details: evidenceDetails,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail ?? "Unable to add evidence.",
+        );
+      }
+
+      setEvidence((current) => [data, ...current]);
+      setEvidenceTitle("");
+      setEvidenceDetails("");
+      setSaveMessage("Evidence added successfully.");
+      await loadCaseActivity(investigation.id);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to add evidence.",
+      );
+    } finally {
+      setEvidenceSaving(false);
     }
   };
 
@@ -221,6 +343,7 @@ export default function InvestigationsPage() {
       setInvestigation(data);
       setStatus(data.status);
       setNotes(data.notes);
+      await loadCaseActivity(data.id);
       setSaveMessage(
         data.id + " updated successfully.",
       );
@@ -390,6 +513,125 @@ export default function InvestigationsPage() {
                 )}
               </div>
             </section>
+
+            {investigation && (
+              <div className="investigationEvidenceGrid">
+                <section className="panel">
+                  <div className="panelHead">
+                    <div>
+                      <span className="sectionLabel">CASE EVIDENCE</span>
+                      <h2>Evidence and findings</h2>
+                    </div>
+                    <span className="riskBadge">
+                      {evidence.length} ITEMS
+                    </span>
+                  </div>
+
+                  <div className="investigationEvidenceForm">
+                    <select
+                      value={evidenceType}
+                      onChange={(event) =>
+                        setEvidenceType(event.target.value)
+                      }
+                    >
+                      {evidenceTypes.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+
+                    <input
+                      value={evidenceTitle}
+                      onChange={(event) =>
+                        setEvidenceTitle(event.target.value)
+                      }
+                      placeholder="Evidence title"
+                    />
+
+                    <textarea
+                      value={evidenceDetails}
+                      onChange={(event) =>
+                        setEvidenceDetails(event.target.value)
+                      }
+                      placeholder="Describe the evidence or finding."
+                      rows={4}
+                    />
+
+                    <button
+                      className="primary"
+                      type="button"
+                      onClick={addEvidence}
+                      disabled={evidenceSaving}
+                    >
+                      {evidenceSaving ? "Adding..." : "Add evidence"}
+                    </button>
+                  </div>
+
+                  <div className="investigationEvidenceList">
+                    {evidence.length ? (
+                      evidence.map((item) => (
+                        <article
+                          className="investigationEvidenceItem"
+                          key={item.id}
+                        >
+                          <div className="investigationEvidenceMeta">
+                            <span>{item.evidence_type}</span>
+                            <time>
+                              {new Date(item.created_at).toLocaleString()}
+                            </time>
+                          </div>
+                          <strong>{item.title}</strong>
+                          <p>{item.details}</p>
+                        </article>
+                      ))
+                    ) : (
+                      <div className="networkAccountEmpty">
+                        No evidence has been added yet.
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className="panel">
+                  <div className="panelHead">
+                    <div>
+                      <span className="sectionLabel">CASE TIMELINE</span>
+                      <h2>Investigation activity</h2>
+                    </div>
+                    <span className="riskBadge">
+                      {timeline.length} EVENTS
+                    </span>
+                  </div>
+
+                  <div className="investigationTimeline">
+                    {timeline.length ? (
+                      timeline.map((event) => (
+                        <article
+                          className="investigationTimelineItem"
+                          key={event.id}
+                        >
+                          <span className="investigationTimelineDot" />
+                          <div>
+                            <div className="investigationTimelineMeta">
+                              <strong>{event.title}</strong>
+                              <time>
+                                {new Date(event.created_at).toLocaleString()}
+                              </time>
+                            </div>
+                            <p>{event.details}</p>
+                          </div>
+                        </article>
+                      ))
+                    ) : (
+                      <div className="networkAccountEmpty">
+                        No timeline events yet.
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+            )}
 
             <div className="metrics">
               {[
