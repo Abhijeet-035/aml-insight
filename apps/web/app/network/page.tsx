@@ -42,7 +42,7 @@ type NetworkResponse = {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-const DEFAULT_ACCOUNT = "80A21CFF0";
+const DEFAULT_ACCOUNT = "811C599A0";
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("en-US", {
