@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 import json
+import os
 import joblib
 import numpy as np
 import pandas as pd
@@ -40,10 +41,15 @@ MODEL_FEATURES = [
     "pair_prior_amount",
 ]
 
+origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000",
+).split(",")
+
 app = FastAPI(title="AML Insight API", version="0.4.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[origin.strip() for origin in origins if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
